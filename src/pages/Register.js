@@ -1,7 +1,6 @@
 // src/pages/Register.js
 import React, { useMemo, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Select, { components } from "react-select";
 import API from "../services/api"; // baseURL: http://localhost:5201/api
 import "../styles/pages/_register.scss"; 
 
@@ -23,9 +22,7 @@ const COUNTRIES = [
 
 
 
-const months = [
-  "Month","01","02","03","04","05","06","07","08","09","10","11","12"
-];
+const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
 
 function clampDay(day) {
   const d = parseInt(day || "0", 10);
@@ -44,9 +41,9 @@ export default function Register() {
 
   // step-2
   const [userName, setUserName] = useState("");
-  const [month, setMonth] = useState("Month");
-  const [day, setDay] = useState("Day");
-  const [year, setYear] = useState("Year");
+  const [month, setMonth] = useState("");
+  const [day, setDay] = useState("");
+  const [year, setYear] = useState("");
   const [country, setCountry] = useState(COUNTRIES[1]); // US default (ekrandaki gibi)
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -69,24 +66,37 @@ export default function Register() {
   );
 
   const birthIso = useMemo(() => {
-    if (!year || year === "Year" || month === "Month" || !day || day === "Day") return null;
-    return `${year}-${month}-${clampDay(day)}`;
-  }, [year, month, day]);
+   if (!year || !month || !day) return null;
+   return `${year}-${month}-${day}`; // day zaten 01-31
+ }, [year, month, day]);
+
+ const canSubmit = useMemo(() => {
+  return !!(
+    userName.trim() &&
+    birthIso &&
+    password &&
+    password.length >= 6 &&
+    password === password2
+  );
+}, [userName, birthIso, password, password2]);
 
   // Day seçenekleri (ay/yıla göre 28-29-30-31 otomatik)
-const DAYS = useMemo(() => {
-  if (month === "Month") return ["Day", ...Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"))];
+const daysInMonth = useMemo(() => {
+  if (!month) return 31;
   const mm = parseInt(month, 10);
-  const yy = /^\d{4}$/.test(year) ? parseInt(year, 10) : 2000; // leap year kontrolü için varsayılan
-  const max = new Date(yy, mm, 0).getDate(); // ilgili ayın gün sayısı
-  return ["Day", ...Array.from({ length: max }, (_, i) => String(i + 1).padStart(2, "0"))];
+  const yy = year ? parseInt(year, 10) : 2000; // leap-year kontrolü için varsayılan
+  return new Date(yy, mm, 0).getDate();
 }, [month, year]);
 
-// Year seçenekleri (şimdiki yıldan 1900'e kadar)
+const DAYS = useMemo(
+  () => Array.from({ length: daysInMonth }, (_, i) => String(i + 1).padStart(2, "0")),
+  [daysInMonth]
+);
+
 const YEARS = useMemo(() => {
   const now = new Date().getFullYear();
   const min = 1900;
-  return ["Year", ...Array.from({ length: now - min + 1 }, (_, i) => String(now - i))];
+  return Array.from({ length: now - min + 1 }, (_, i) => String(now - i));
 }, []);
 
 
@@ -158,14 +168,11 @@ const YEARS = useMemo(() => {
 }, [email, emailValid]);
 
 
-useEffect(() => {
-  if (day === "Day") return;
-  const mm = month === "Month" ? null : parseInt(month, 10);
-  const yy = /^\d{4}$/.test(year) ? parseInt(year, 10) : 2000;
-  const max = mm ? new Date(yy, mm, 0).getDate() : 31;
-  const d = parseInt(day, 10);
-  if (d > max) setDay("Day");
-}, [month, year]);
+  useEffect(() => {
+    if (!day) return;
+    const d = parseInt(day, 10);
+    if (d > daysInMonth) setDay("");
+  }, [daysInMonth, day]);
 
   return (
     <div
@@ -243,6 +250,9 @@ useEffect(() => {
             </form>
             ) : (
               <form onSubmit={onSubmit}>
+              {err && <div className="alert error">{err}</div>}
+              {ok  && <div className="alert ok">{ok}</div>}
+
                 <div className="form-field floating">
                   <input
                     id="reg-username"
@@ -268,9 +278,9 @@ useEffect(() => {
                 onChange={(e) => setMonth(e.target.value)}
                 required
               >
-                {months.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
+                <option value="">Month</option>
+         {MONTHS.map((m) => (<option key={m} value={m}>{m}</option>))}
+                
               </select>
 
               <select
@@ -279,9 +289,8 @@ useEffect(() => {
                 onChange={(e) => setDay(e.target.value)}
                 required
               >
-                {DAYS.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
+                <option value="">Day</option>
+              {DAYS.map((d) => (<option key={d} value={d}>{d}</option>))}
               </select>
 
               <select
@@ -290,9 +299,8 @@ useEffect(() => {
                 onChange={(e) => setYear(e.target.value)}
                 required
               >
-                {YEARS.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
+                <option value="">Year</option>
+               {YEARS.map((y) => (<option key={y} value={y}>{y}</option>))}
               </select>
             </div>
 
@@ -314,7 +322,6 @@ useEffect(() => {
                 ))}
               </select>
 
-                {/* PASSWORD */}
                 <div className="form-field floating">
                   <input
                     id="reg-password"
@@ -326,11 +333,22 @@ useEffect(() => {
                     required
                     autoComplete="new-password"
                   />
-                  <label htmlFor="reg-password">Password <span className="req">*</span></label>
-                  <button type="button" className="toggle" onClick={() => setShowPwd((s) => !s)}>
+                  <label htmlFor="reg-password">
+                    Password <span className="req">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="toggle"
+                    onClick={() => setShowPwd((s) => !s)}
+                  >
                     {showPwd ? "🙈" : "👁️"}
                   </button>
                 </div>
+
+                {/* 🔽 Şifre uyarı mesajı */}
+                {password && password.length < 6 && (
+                  <div className="check err">Password must be at least 6 characters.</div>
+                )}
 
                 {/* CONFIRM PASSWORD */}
                 <div className="form-field floating">
@@ -349,9 +367,24 @@ useEffect(() => {
                     {showPwd2 ? "🙈" : "👁️"}
                   </button>
                 </div>
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? "Creating..." : "Join the Game World"}
-                </button>
+                {password2 && password !== password2 && (
+                  <div className="check err">Passwords do not match.</div>
+                )}
+               <button
+                type="submit"
+                className="btn-primary"
+                disabled={
+                  loading ||
+                  !userName.trim() ||
+                  !birthIso ||
+                  !password ||
+                  password.length < 6 ||
+                  password !== password2 ||
+                  !country?.name
+                }
+              >
+                {loading ? "Creating..." : "Join the Game World"}
+              </button>
               </form>
             )}
           </div>
