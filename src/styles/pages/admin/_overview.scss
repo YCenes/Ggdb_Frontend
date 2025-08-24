@@ -1,0 +1,281 @@
+/* Dark Neon Admin – AdminOverview */
+:root {
+  --bg: #0b0f16;
+  --panel: #111827;
+  --panel-2: #0f1722;
+  --line: #1f2937;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --muted-2: #64748b;
+  --muted-3: #3b4454;
+  --yellow: #f7d24c;
+  --red: #f87171;
+  --green: #22c55e;
+  --blue: #6ca8ff;
+  --purple: #a78bfa;
+  --card-radius: 16px;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+.admin-page {
+  min-height: 100vh;
+  padding: 24px;
+  background:
+    radial-gradient(1200px 1200px at 10% -10%, #0a1322 0%, transparent 60%),
+    radial-gradient(900px 900px at 90% 0%, #0a1020 0%, transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Inter", Segoe UI, Roboto, sans-serif;
+}
+
+/* header */
+.page-head {
+  margin-bottom: 16px;
+  h1 { font-weight: 800; letter-spacing: .2px; margin: 0 0 6px; }
+  p { color: var(--muted); margin: 0; }
+}
+
+/* cards (GENEL) */
+.card {
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+}
+
+/* KPI */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  margin: 16px 0 20px;
+
+  .kpi {
+    grid-column: span 4;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+
+    .kpi-icon {
+      width: 46px; height: 46px;
+      display: grid; place-items: center;
+      font-size: 22px;
+      background: rgba(99,102,241,.08);
+      border: 1px solid rgba(99,102,241,.25);
+      border-radius: 12px;
+    }
+    .kpi-body {
+      .kpi-value { font-size: 28px; font-weight: 800; }
+      .kpi-label { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    }
+    .kpi-delta .delta {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; padding: 6px 10px; border-radius: 999px;
+      color: #b6f4c3; background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.35);
+      svg { width: 14px; height: 14px; }
+    }
+  }
+
+  @media (max-width: 992px) { .kpi { grid-column: span 6; } }
+  @media (max-width: 600px) { .kpi { grid-column: span 12; } }
+}
+
+/* 2-column charts */
+.grid-2 {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 16px;
+   > .card {
+    width: 100%;
+  }
+}
+@media (max-width: 1000px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+.chart-card { 
+  padding: 16px; 
+  display: flex; 
+  flex-direction: column; 
+}
+
+.chart-card .legend { margin-top: 8px; }
+
+/* kart başlıkları */
+.card-title {
+  font-weight: 700; 
+  margin-bottom: 16px; 
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  color: var(--text);
+  .title-ico { font-size: 18px; }
+}
+
+/* Line chart */
+.linechart { 
+  width: 100%; 
+  height: 280px;   /* piechart ile aynı yükseklik */
+  max-width: 100%; 
+}
+.grid { stroke: var(--line); stroke-width: 1; opacity: .6; stroke-dasharray: 4 6; }
+
+.line {
+  fill: none; stroke-width: 3;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.35));
+}
+.line-users { stroke: var(--blue); }
+.line-games { stroke: var(--green); }
+.tick { fill: var(--muted-2); font-size: 11px; paint-order: stroke; stroke: #0b0f16; stroke-width: 3; }
+
+
+/* line chart legend'i */
+.legend {
+  display: flex; gap: 16px; align-items: center; padding: 0 8px 6px;
+  color: var(--muted);
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+}
+.dot-u { fill: var(--blue); stroke: #0b0f16; stroke-width: 2; }
+.dot-g { fill: var(--green); stroke: #0b0f16; stroke-width: 2; }
+
+/* PIE CARD – koyu tema + dış etiket + leader line */
+.pie-card {
+     width: 100%;
+  overflow: hidden;
+  /* başlıkta yeşil ikon vurgusu */
+  .card-title .title-ico { color: var(--green); }
+
+  .pie-wrap { position: relative; padding: 8px 8px 16px; }
+  .piechart { width: 100%; height: 280px; }
+
+  /* merkez daire arkaplanı */
+  .pie-bg {
+    fill: none;
+    stroke: rgba(255,255,255,.06);
+    stroke-width: 30;
+  }
+
+  /* dilimler */
+  .pie-slice { transition: transform .15s ease; }
+  .pie-slice:hover { transform: scale(1.02); }
+
+  /* leader line */
+  .leader {
+    fill: none;
+    stroke: rgba(255,255,255,.45);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+  }
+
+  /* dış etiketler (neon renkler) */
+  .label {
+    font-weight: 700;
+    font-size: 14px;
+    dominant-baseline: central;
+  }
+  /* data sırası: blue, green, yellow, purple, red */
+  .label-0 { fill: var(--blue); }
+  .label-1 { fill: var(--green); }
+  .label-2 { fill: var(--yellow); }
+  .label-3 { fill: var(--purple); }
+  .label-4 { fill: var(--red); }
+
+  @media (max-width: 700px) {
+    .label { font-size: 12px; }
+    .piechart { height: 260px; }
+  }
+}
+
+/* sol (line) kart ikon rengi mavi */
+.chart-card .card-title .title-ico { color: var(--blue); }
+
+/* Actions */
+.actions { padding: 12px 0 6px; margin-bottom: 16px; }
+.action-list { list-style: none; margin: 8px 0 12px; padding: 0; }
+.item {
+  display: grid; grid-template-columns: 36px 1fr 14px; align-items: center;
+  gap: 12px; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.04);
+  &:first-child { border-top: 0; }
+  .ico {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--muted-3);
+  }
+  .body .txt { font-weight: 600; }
+  .body .time { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .trail-dot {
+    width: 8px; height: 8px; border-radius: 50%; justify-self: end;
+    background: var(--muted-3);
+  }
+  &.danger .ico { background: rgba(248,113,113,.2); border: 1px solid rgba(248,113,113,.5); }
+  &.danger .trail-dot { background: var(--red); }
+  &.warn .ico { background: rgba(247,210,76,.18); border: 1px solid rgba(247,210,76,.6); }
+  &.warn .trail-dot { background: var(--yellow); }
+  &.ok .ico { background: rgba(34,197,94,.18); border: 1px solid rgba(34,197,94,.6); }
+  &.ok .trail-dot { background: var(--green); }
+}
+.view-all {
+  display: block; margin: 4px auto 8px; padding: 8px 14px; border-radius: 8px;
+  color: var(--yellow); background: transparent; border: 1px dashed rgba(247,210,76,.5);
+  cursor: pointer; transition: .2s ease;
+  &:hover { background: rgba(247,210,76,.12); }
+}
+
+/* Health */
+.health-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;
+  @media (max-width: 800px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 500px) { grid-template-columns: 1fr; }
+}
+.health { padding: 14px 16px; display: grid; gap: 14px; }
+.health .head { font-weight: 700; }
+.health .foot {
+  display: flex; align-items: center; justify-content: space-between;
+  .state { color: var(--muted); }
+  .lamp { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(34,197,94,.12); }
+}
+/* ==== Line chart: tooltip + hover guide + konum ==== */
+.linechart-wrap { position: relative; }   /* kart içinde tooltip konumu için */
+.svg-holder    { position: relative; }
+
+.linechart {
+  display: block;
+  width: 100%;
+  height: 280px; /* piechart ile aynı yükseklik */
+}
+
+/* Hover'da dikey kılavuz çizgisi */
+.hover-line {
+  stroke: rgba(255,255,255,.35);
+  stroke-dasharray: 2 4;
+  shape-rendering: crispEdges;
+}
+
+/* Tooltip kartı (sağ üstte koyu panel gibi) */
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  min-width: 220px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 8px 30px rgba(0,0,0,.45);
+  z-index: 3;
+  transform: translateY(-50%); /* çizginin biraz üstünde dursun */
+
+  .tip-date { font-weight: 800; color: #e5e7eb; margin-bottom: 6px; }
+  .tip-row  { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .dot      { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot-users { background: var(--blue); }
+  .dot-games { background: var(--green); }
+}
+
+/* Legend'ın karttaki hizası */
+.chart-card .legend { margin-top: 8px; }
+
+/* (İsteğe bağlı) ızgara görünürlüğünü biraz yumuşat */
+.grid { opacity: .55; }

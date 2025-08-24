@@ -24,6 +24,7 @@ const COUNTRIES = [
 
 const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
 
+
 function clampDay(day) {
   const d = parseInt(day || "0", 10);
   if (isNaN(d)) return "";
@@ -56,7 +57,7 @@ export default function Register() {
   const [ok, setOk] = useState("");
   const [emailAvailable, setEmailAvailable] = useState(null);   
   const [checkingEmail, setCheckingEmail]   = useState(false);
-
+  const [counts , setCounts] = useState({ totalUsers: 0, totalGames: 0 });
   
 
 
@@ -174,6 +175,21 @@ const YEARS = useMemo(() => {
     if (d > daysInMonth) setDay("");
   }, [daysInMonth, day]);
 
+   useEffect(() => {
+  let alive = true;
+  (async () => {
+    try {
+      const res = await API.get("/admin/usergamecount");
+      if (alive) setCounts(res.data ?? { totalUsers: 0, totalGames: 0 });
+    } catch (err) {
+      if (alive) setCounts({ totalUsers: 0, totalGames: 0 });
+    }
+  })();
+  return () => { alive = false; };
+}, []);
+
+const totalUser = counts?.totalUsers ?? 0;
+const totalGame = counts?.totalGames ?? 0;
   return (
     <div
       className="register-page"
@@ -385,13 +401,30 @@ const YEARS = useMemo(() => {
               >
                 {loading ? "Creating..." : "Join the Game World"}
               </button>
+
+              <div className="auth-alt mt-3">
+              <span>
+                Go back to {""} <span
+                  type="button" 
+                  className="auth-alt-link" 
+                  onClick={() => setStep(1)}
+                >
+                  email
+                </span>
+              </span>
+            </div>
+
+             <div className="auth-alt mt-5">
+                <span>Already a player? </span>
+                <Link to="/login" className="auth-alt-link">Sign in</Link>
+              </div>
               </form>
             )}
           </div>
 
           <div className="card-stats">
-            <div className="stat"><div className="num">14</div><div className="label">Gamers</div></div>
-            <div className="stat"><div className="num">30</div><div className="label">Games</div></div>
+            <div className="stat"><div className="num">{totalUser}</div><div className="label">Gamers</div></div>
+            <div className="stat"><div className="num">{totalGame}</div><div className="label">Games</div></div>
             <div className="stat"><div className="num">28</div><div className="label">Reviews</div></div>
           </div>
 

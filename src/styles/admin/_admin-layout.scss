@@ -1,0 +1,341 @@
+@use "sass:color";
+@import "./variables";
+
+:root { color-scheme: dark; }
+
+/* ======= KÖK LAYOUT ======= */
+.admin-layout {
+  min-height: 100vh;
+  background: $bg-root;
+  color: $text;
+
+  /* Sadece desktop'ta içerik sağa itilsin */
+  &.has-sidebar {
+    @media (min-width: 1024px) {
+      padding-left: $sidebar-w;
+
+      &.is-collapsed {
+        padding-left: $sidebar-w-sm;
+      }
+    }
+  }
+
+  .admin-content {
+    padding: 16px;
+    @media (min-width: 1024px) { padding: 24px; }
+  }
+}
+
+/* ======= HEADER ======= */
+.admin-header {
+  position: fixed;
+  top: 0;
+  left: 0;                   /* Mobil başlangıç: tam genişlik */
+  width: 100%;
+  height: $header-h;
+  border-bottom: 1px solid $line;
+  z-index: 30;
+  box-sizing: border-box;
+  @include glass(.85);
+
+  /* Desktop'ta sidebar kadar sağa kaydır */
+  @media (min-width: 1024px) {
+    left: $sidebar-w;
+    width: calc(100% - #{$sidebar-w});
+  }
+
+  /* Desktop + collapsed */
+  @media (min-width: 1024px) {
+    .admin-layout.is-collapsed & {
+      left: $sidebar-w-sm;
+      width: calc(100% - #{$sidebar-w-sm});
+    }
+  }
+
+  .search {
+    margin-left: auto;        /* başlıktan sonra sağa it */
+    flex: 0 0 340px;          /* arama kutusu genişliği */
+    max-width: 340px;
+
+    @media (max-width: 768px) {
+      flex: 0 0 260px;
+      max-width: 260px;
+    }
+    @media (max-width: 640px) {
+      flex: 1 1 auto;         /* mobilde esnesin */
+      max-width: 100%;
+    }
+  }
+.header-title {
+    flex: 0 1 auto;
+    min-width: 0; // truncate için
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      color: $text;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    p {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: $text-dim;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Çok dar ekranlarda alt açıklamayı gizle */
+    @media (max-width: 640px) {
+      p { display: none; }
+    }
+  }
+  .inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* search sağda kalsın */
+    gap: 16px;
+    height: 100%;
+    padding: 0 16px;
+    @media (min-width: 1024px) { padding: 0 24px; }
+  }
+
+  .icon-btn {
+    padding: 8px;
+    border-radius: $radius-sm;
+    background: transparent;
+    border: 0;
+    color: $text;
+    cursor: pointer;
+    transition: background $transition ease;
+    &:hover { background: $bg-elev-2; }
+  }
+
+  .search {
+    margin-left: auto;         /* sağa it */
+    flex: 0 0 320px;           /* sabit genişlik */
+    max-width: 320px;
+    position: relative;
+
+    @media (max-width: 640px) {
+      flex: 1 1 auto;          /* mobilde esnesin */
+      max-width: 100%;
+    }
+
+    input {
+      width: 100%;
+      background: rgba(15,21,34,.7);
+      border: 1px solid #1f2937;
+      color: $text;
+      padding: 10px 12px 10px 36px;
+      border-radius: $radius;
+      font-size: 14px;
+      outline: none;
+      transition: border $transition ease, box-shadow $transition ease;
+
+      &::placeholder { color: $text-muted; }
+      &:focus {
+        border-color: color.scale($brand, $lightness: 10%);
+        box-shadow: 0 0 0 2px color.scale($brand, $alpha: -60%);
+      }
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 0; bottom: 0;
+      display: flex; align-items: center;
+      color: $text-muted;
+      pointer-events: none;
+      font-size: 16px;
+    }
+  }
+
+  .header-right {
+    display: none;
+    align-items: center; gap: 16px;
+    @media (min-width: 768px) { display: flex; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 8px;
+      border-radius: 10px;
+      background: $bg-elev-2;
+      font-size: 12px;
+      color: $text;
+
+      &.ok {
+        background: $ok-dim;
+        color: color.mix($ok, white, 70%);
+        border: 1px solid color.scale($ok, $lightness: -15%);
+      }
+    }
+
+    .notif-btn {
+      position: relative;
+      .badge {
+        position: absolute;
+        right: -2px; top: -2px;
+        min-width: 16px; height: 16px;
+        border-radius: 999px;
+        background: $danger; color: white;
+        font-size: 10px; line-height: 16px;
+        text-align: center; padding: 0 2px;
+      }
+    }
+
+    .user {
+      display: flex; align-items: center; gap: 12px;
+      img { width: 32px; height: 32px; border-radius: 999px; }
+      .meta {
+        display: none; line-height: 1.1;
+        @media (min-width: 640px) { display: flex; flex-direction: column; }
+        .name { font-size: 14px; color: $text; }
+        .role { font-size: 11px; color: $text-dim; }
+      }
+    }
+  }
+}
+
+/* ======= SIDEBAR ======= */
+.admin-sidebar {
+  position: fixed;
+  top: 0;                 /* Header ile aynı hizadan başla (tepe) */
+  left: 0;
+  height: 100vh;          /* Tam ekran yüksekliği */
+  width: $sidebar-w;
+  background: $bg-elev-1;
+  border-right: 1px solid $line;
+  z-index: 40;
+  box-shadow: none;
+  transition: width $transition ease, transform $transition ease;
+
+  /* Desktop collapse */
+  &.is-collapsed {
+    @media (min-width: 1024px) {
+      width: $sidebar-w-sm;
+      .label { opacity: 0; pointer-events: none; }
+      .footer { opacity: 0; pointer-events: none; }
+    }
+  }
+
+  /* Mobil: off-canvas */
+  transform: translateX(-100%);
+  &.is-open { transform: translateX(0); }
+  @media (min-width: 1024px) { transform: none !important; }
+
+  .wrap {
+    height: 100%;
+    display: flex; flex-direction: column;
+    padding: 12px;
+    overflow: hidden;
+  }
+
+  /* üst şerit: brand + toggle */
+  .side-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 4px;
+    margin: 0 0 8px 0;
+    border-bottom: 1px solid $line;
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 600; letter-spacing: .2px;
+    color: $logo-yellow; text-decoration: none;
+
+    .logo {
+      width: 24px; height: 24px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      background: $brand; color: white;
+      font-size: 12px; font-weight: 700;
+    }
+
+    .title { display: inline; }
+  }
+  &.is-collapsed .brand .title { display: none; }
+
+  .icon-btn {
+    padding: 8px;
+    border-radius: $radius-sm;
+    background: transparent; border: 0; color: $text;
+    cursor: pointer; transition: background $transition ease;
+    &:hover { background: $bg-elev-2; }
+  }
+
+  /* burger ikon (yatay <-> dikey) */
+  .burger {
+    display: inline-block;
+    width: 20px; height: 2px;
+    background: currentColor; border-radius: 2px;
+    transition: all .3s ease;
+    box-shadow: 0 -6px 0 currentColor, 0 6px 0 currentColor;
+    color: $logo-yellow;
+  }
+  .burger.open {
+    width: 2px; height: 20px;
+    box-shadow: -6px 0 0 currentColor, 6px 0 0 currentColor;
+    color: $text;
+  }
+
+  nav {
+    flex: 1;
+    overflow: auto;
+    padding-right: 4px;
+
+    &::-webkit-scrollbar { width: 8px; }
+    &::-webkit-scrollbar-thumb {
+      background: #141a27;
+      border-radius: 999px;
+    }
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px;
+    border-radius: $radius;
+    color: $text;
+    text-decoration: none;
+    transition: background $transition ease, color $transition ease;
+
+    .icon {
+      width: 18px; height: 18px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+
+    .label {
+      transition: opacity $transition ease;
+      @include truncate;
+    }
+
+    &:hover { background: rgba(45,57,80,.5); color: white; }
+    &.active { background: #0f172a; color: white; }
+  }
+
+  .footer {
+    margin-top: 8px;
+    font-size: 11px;
+    color: $text-dim;
+    text-align: left;
+    transition: opacity $transition ease;
+  }
+}
+
+/* ======= MOBILE OVERLAY ======= */
+.admin-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  backdrop-filter: blur(2px);
+  z-index: 50; /* sidebar'dan yüksek, header'dan düşük tutabilirsin ihtiyaca göre */
+  opacity: 0; pointer-events: none;
+  transition: opacity $transition ease;
+
+  &.is-visible { opacity: 1; pointer-events: auto; }
+  @media (min-width: 1024px) { display: none; }
+}

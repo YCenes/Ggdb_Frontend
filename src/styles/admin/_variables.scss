@@ -1,0 +1,36 @@
+// Colors
+$bg-root:        #0b0f17;
+$bg-elev-1:      #0c111b;
+$bg-elev-2:      #0f1522;
+$line:           #0f1a2a;
+$text:           #cbd5e1;  // slate-300
+$text-dim:       #94a3b8;  // slate-400
+$text-muted:     #64748b;  // slate-500
+$brand:          #4f46e5;  // indigo-600
+$ok:             #10b981;  // emerald-500
+$ok-dim:         rgba(16,185,129,.15);
+$danger:         #ef4444;
+$logo-yellow: #f5c21a;
+// Sizes
+$sidebar-w:      260px;
+$sidebar-w-sm:    76px;
+$header-h:        64px;
+$radius:          12px;
+$radius-sm:        8px;
+$transition:     200ms;
+
+// Shadows
+$shadow-1: 0 10px 30px rgba(0,0,0,.35);
+$shadow-2: 0 20px 50px rgba(0,0,0,.45);
+
+// Mixins
+@mixin glass($alpha: .75) {
+  backdrop-filter: blur(10px);
+  background: rgba(11,15,23,$alpha);
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
