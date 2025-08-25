@@ -1,0 +1,97 @@
+/* Grafik ortak stilleri */
+.linechart-wrap { position: relative; }
+.svg-holder    { position: relative; }
+
+.linechart {
+  display: block;
+  width: 100%;
+  height: 280px; /* piechart ile aynı */
+}
+
+.grid { stroke: var(--line); stroke-width: 1; opacity: .55; stroke-dasharray: 4 6; }
+
+.line { fill: none; stroke-width: 3; filter: drop-shadow(0 3px 6px rgba(0,0,0,.35)); }
+.line-users { stroke: var(--blue); }
+.line-games { stroke: var(--green); }
+
+.tick { fill: var(--muted-2); font-size: 11px; paint-order: stroke; stroke: #0b0f16; stroke-width: 3; }
+
+.legend {
+  display: flex; gap: 16px; align-items: center; padding: 0 8px 6px;
+  color: var(--muted);
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+}
+
+.dot-u { fill: var(--blue); stroke: #0b0f16; stroke-width: 2; }
+.dot-g { fill: var(--green); stroke: #0b0f16; stroke-width: 2; }
+
+.hover-line {
+  stroke: rgba(255,255,255,.35);
+  stroke-dasharray: 2 4;
+  shape-rendering: crispEdges;
+}
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  min-width: 220px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 8px 30px rgba(0,0,0,.45);
+  z-index: 3;
+  transform: translateY(-50%);
+  .tip-date { font-weight: 800; color: #e5e7eb; margin-bottom: 6px; }
+  .tip-row  { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .dot      { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot-users { background: var(--blue); }
+  .dot-games { background: var(--green); }
+}
+
+.point-tag {
+  position: absolute;
+  transform: translate(-50%, -120%);
+  min-width: 60px;
+  text-align: center;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(0,0,0,.6);
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.point-tag.users { box-shadow: 0 0 0 2px rgba(108,168,255,.08); }
+.point-tag.games { box-shadow: 0 0 0 2px rgba(34,197,94,.08); }
+
+.dot-u.is-active, .dot-g.is-active {
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+/* Pie */
+.pie-card {
+  width: 100%;
+  overflow: hidden;
+  .card-title .title-ico { color: var(--text); }
+  .pie-wrap { position: relative; padding: 8px 8px 16px; }
+  .piechart { width: 100%; height: 280px; }
+  .pie-bg { fill: none; stroke: rgba(255,255,255,.06); stroke-width: 30; }
+  .pie-slice { transition: transform .15s ease; }
+  .pie-slice:hover { transform: scale(1.02); }
+  .leader { fill: none; stroke: rgba(255,255,255,.45); stroke-width: 1; stroke-dasharray: 3 3; }
+  .label { font-weight: 700; font-size: 14px; dominant-baseline: central; }
+  .label-0 { fill: var(--blue); }
+  .label-1 { fill: var(--green); }
+  .label-2 { fill: var(--yellow); }
+  .label-3 { fill: var(--purple); }
+  .label-4 { fill: var(--red); }
+
+  @media (max-width: 700px) {
+    .label { font-size: 12px; }
+    .piechart { height: 260px; }
+  }
+}
+

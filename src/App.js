@@ -13,32 +13,45 @@ import PublicShell from "./components/layout/PublicShell";
 import AdminShell from "./components/layout/AdminShell";
 
 // Admin pages
-import Overview from "./pages/Admin/Overview"; // İstersen AdminShell ile Outlet kullanırsan bu sayfayı sade de yapabilirsin
+import Overview from "./pages/Admin/AdminOverview/AdminOverview"; 
+
+// NEW
+import { AuthProvider } from "./context/AuthContext.js";
+import RequireAdmin from "./components/routing/RequireAdmin.js";
 
 import "./styles/main.scss";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public site (Header + Footer) */}
-        <Route element={<PublicShell />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Route>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public site (Header + Footer) */}
+          <Route element={<PublicShell />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+          </Route>
 
-        {/* Admin (Sadece AdminLayout: Sidebar + Header) */}
-        <Route path="/admin" element={<AdminShell />}>
-         <Route index element={<Overview />} />
-        </Route>
+          {/* Admin (korumalı) */}
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminShell />
+              </RequireAdmin>
+            }
+          >
+            <Route index element={<Overview />} />
+          </Route>
 
-        {/* 404 */}
-        <Route path="*" element={<div style={{ padding: 24 }}>Sayfa bulunamadı</div>} />
-      </Routes>
-    </Router>
+          {/* 404 */}
+          <Route path="*" element={<div style={{ padding: 24 }}>Sayfa bulunamadı</div>} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 export default App;
