@@ -1,15 +1,20 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   Home, Gauge, Layers3, Gamepad2, Users, BarChart3, Settings, ServerCog, Bug,
 } from "lucide-react";
 
-function Item({ icon: Icon, label, to = "#", active = false, onClick }) {
+function Item({ icon: Icon, label, to = "#", onClick, end = false }) {
   return (
-    <Link to={to} className={`nav-item ${active ? "active" : ""}`} onClick={onClick}>
+    <NavLink
+      to={to}
+      end={end}
+      onClick={onClick}
+      className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+    >
       <span className="icon"><Icon size={18} /></span>
       <span className="label">{label}</span>
-    </Link>
+    </NavLink>
   );
 }
 
@@ -24,7 +29,6 @@ export default function Sidebar({ open, setOpen, mobileOpen, setMobileOpen }) {
 
   return (
     <>
-      {/* Mobile overlay */}
       <div
         className={`admin-overlay ${mobileOpen ? "is-visible" : ""}`}
         onClick={() => setMobileOpen(false)}
@@ -32,11 +36,10 @@ export default function Sidebar({ open, setOpen, mobileOpen, setMobileOpen }) {
 
       <aside className={`admin-sidebar ${mobileOpen ? "is-open" : ""} ${open ? "" : "is-collapsed"}`}>
         <div className="wrap">
-          {/* Üst şerit: Brand + Toggle */}
           <div className="side-top">
-            <Link to="/admin" className="brand">
+            <NavLink to="/admin" className="brand">
               <span className="title">Admin Panel</span>
-            </Link>
+            </NavLink>
 
             <button
               type="button"
@@ -48,17 +51,16 @@ export default function Sidebar({ open, setOpen, mobileOpen, setMobileOpen }) {
             </button>
           </div>
 
-          {/* Menü */}
           <nav>
-            <Item icon={Home} label="Site Home"        to="/"                onClick={() => setMobileOpen(false)} />
-            <Item icon={Gauge} label="Overview"         to="/admin" active    onClick={() => setMobileOpen(false)} />
-            <Item icon={Layers3} label="Section Ordering" to="/admin/sections" onClick={() => setMobileOpen(false)} />
-            <Item icon={Gamepad2} label="Manage Games"  to="/admin/games"     onClick={() => setMobileOpen(false)} />
-            <Item icon={Users} label="Manage Users"     to="/admin/users"     onClick={() => setMobileOpen(false)} />
-            <Item icon={BarChart3} label="Analytics"    to="/admin/analytics" onClick={() => setMobileOpen(false)} />
-            <Item icon={Settings} label="Settings"      to="/admin/settings"  onClick={() => setMobileOpen(false)} />
-            <Item icon={ServerCog} label="System Logs"  to="/admin/system-logs" onClick={() => setMobileOpen(false)} />
-            <Item icon={Bug} label="Error Logs"         to="/admin/error-logs"  onClick={() => setMobileOpen(false)} />
+            <Item icon={Home}    label="Site Home"        to="/"                 end onClick={() => setMobileOpen(false)} />
+            <Item icon={Gauge}   label="Overview"         to="/admin"            end onClick={() => setMobileOpen(false)} />
+            <Item icon={Layers3} label="Section Ordering" to="/admin/sections"       onClick={() => setMobileOpen(false)} />
+            <Item icon={Gamepad2}label="Manage Games"     to="/admin/managegame"     onClick={() => setMobileOpen(false)} />
+            <Item icon={Users}   label="Manage Users"     to="/admin/users"          onClick={() => setMobileOpen(false)} />
+            <Item icon={BarChart3}label="Analytics"       to="/admin/analytics"      onClick={() => setMobileOpen(false)} />
+            <Item icon={Settings}label="Settings"         to="/admin/settings"       onClick={() => setMobileOpen(false)} />
+            <Item icon={ServerCog}label="System Logs"     to="/admin/system-logs"    onClick={() => setMobileOpen(false)} />
+            <Item icon={Bug}     label="Error Logs"       to="/admin/error-logs"     onClick={() => setMobileOpen(false)} />
           </nav>
 
           <div className="footer">GGDB Admin • v1.0</div>

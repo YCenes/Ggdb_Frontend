@@ -1,9 +1,10 @@
 import API from "../../../../services/api.js";
 
-/** @returns {Promise<{totalUsers:number,totalGames:number}>} */
-export async function getUserGameCount() {
-  const r = await API.get("/admin/usergamecount");
-  return r?.data ?? { totalUsers: 0, totalGames: 0 };
+/** @returns {Promise<{totalUsers:number,totalGames:number,windowDays:number,users:{current:number,previous:number,deltaPct:number},games:{current:number,previous:number,deltaPct:number}}>} */
+export async function getUserGameCount(params = {}) {
+  const { windowDays = 7 } = params;
+  const r = await API.get("/admin/usergamecount", { params: { windowDays } });
+  return r?.data ?? { totalUsers: 0, totalGames: 0, users: { deltaPct: 0 }, games: { deltaPct: 0 } };
 }
 
 /**

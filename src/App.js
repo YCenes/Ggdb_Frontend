@@ -15,11 +15,13 @@ import AdminShell from "./components/layout/AdminShell";
 // Admin pages
 import Overview from "./pages/Admin/AdminOverview/AdminOverview"; 
 
+
 // NEW
 import { AuthProvider } from "./context/AuthContext.js";
 import RequireAdmin from "./components/routing/RequireAdmin.js";
 
 import "./styles/main.scss";
+import ManageGame from "./pages/Admin/ManageGame.js";
 
 function App() {
   return (
@@ -45,6 +47,7 @@ function App() {
             }
           >
             <Route index element={<Overview />} />
+             <Route path="managegame" element={<ManageGame />} />
           </Route>
 
           {/* 404 */}

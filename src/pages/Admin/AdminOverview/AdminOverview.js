@@ -13,12 +13,7 @@ const ArrowUp = () => (
 
 export default function AdminOverview() {
   // KPI'lar
-  const { data: counts } = useKpis();
-  const kpis = [
-    { icon: "👥", label: "Total Users", value: counts?.totalUsers ?? 0, delta: "+12%" },
-    { icon: "🎮", label: "Total Games", value: counts?.totalGames ?? 0, delta: "+5%" },
-    { icon: "⭐", label: "Total Reviews", value: 28, delta: "+18%" },
-  ];
+ const { kpis, loading } = useKpis({ windowDays: 7 });
 
   // Growth (backend'ten)
   const { series, dims } = useGrowth({ days: 7, mode: "cumulative" });
