@@ -1,18 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import API from "../../services/api.js"
+import API from "../../services/api.js";
 import "../../styles/pages/admin/_manage-game.scss";
-
-const sampleGame = {
-  id: "ln3",
-  cover:
-    "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&auto=format&fit=crop",
-  title: "Little Nightmares III",
-  release: "2025-10-10",
-  studio: "Supermassive Games",
-  genres: ["Platform", "Puzzle", "Adventure"],
-  story:
-    "Embark on a new adventure in the uncanny Nowhere. Face childhood fears, solve eerie puzzles, and escape together..."
-};
+import AddGameModal from "./AddGameModal.js";
 
 const IconEdit = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
@@ -32,8 +21,6 @@ const IconTrash = () => (
   </svg>
 );
 
-
-
 export default function ManageGame() {
   // Filtre/arama state
   const [query, setQuery] = useState("");
@@ -41,8 +28,10 @@ export default function ManageGame() {
   const [platform, setPlatform] = useState("All Platforms");
   const [genre, setGenre] = useState("All Genres");
   const [sort, setSort] = useState("Newest First");
-  const [checked, setChecked] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [addOpen, setAddOpen] = useState(false);
+  // Seçimler (satır bazlı)
+  const [selected, setSelected] = useState(new Set());
 
   // Veri + yükleniyor/hata
   const [games, setGames] = useState([]);
@@ -53,62 +42,62 @@ export default function ManageGame() {
   const skip = 0;
   const take = 100;
 
+  // --- OPTION listeleri ---
   const developerOptions = useMemo(() => {
-  const uniq = new Map(); // lower-case key → orijinal yazım
-  for (const g of games) {
-    const d = (g?.developer || "").trim();
-    if (!d) continue;
-    const key = d.toLowerCase();
-    if (!uniq.has(key)) uniq.set(key, d);
-  }
-  return ["All Developers", ...Array.from(uniq.values()).sort((a, b) => a.localeCompare(b))];
-}, [games]);
+    const uniq = new Map(); // lower-case key → orijinal yazım
+    for (const g of games) {
+      const d = (g?.developer || "").trim();
+      if (!d) continue;
+      const key = d.toLowerCase();
+      if (!uniq.has(key)) uniq.set(key, d);
+    }
+    return ["All Developers", ...Array.from(uniq.values()).sort((a, b) => a.localeCompare(b))];
+  }, [games]);
 
-// Tekrarsız, alfabetik genre listesi (API’den gelen g.genres dizisine göre)
-const genreOptions = useMemo(() => {
-  const uniq = new Set();
-  for (const g of games) {
-    if (Array.isArray(g?.genres)) {
-      for (const gn of g.genres) {
-        const name = (gn || "").trim();
+  const genreOptions = useMemo(() => {
+    const uniq = new Set();
+    for (const g of games) {
+      if (Array.isArray(g?.genres)) {
+        for (const gn of g.genres) {
+          const name = (gn || "").trim();
+          if (name) uniq.add(name);
+        }
+      }
+    }
+    return ["All Genres", ...Array.from(uniq).sort((a, b) => a.localeCompare(b))];
+  }, [games]);
+
+  const platformOptions = useMemo(() => {
+    const uniq = new Set();
+    for (const g of games) {
+      for (const p of (g.platforms || [])) {
+        const name = (p || "").trim();
         if (name) uniq.add(name);
       }
     }
-  }
-  return ["All Genres", ...Array.from(uniq).sort((a, b) => a.localeCompare(b))];
-}, [games]);
+    return ["All Platforms", ...Array.from(uniq).sort((a, b) => a.localeCompare(b))];
+  }, [games]);
 
-const platformOptions = useMemo(() => {
-  const uniq = new Set();
-  for (const g of games) {
-    for (const p of (g.platforms || [])) {
-      const name = (p || "").trim();
-      if (name) uniq.add(name);
+  // Geçerli seçimin listede olmaması durumunda All'a çek
+  useEffect(() => {
+    if (platform !== "All Platforms" && !platformOptions.includes(platform)) {
+      setPlatform("All Platforms");
     }
-  }
-  return ["All Platforms", ...Array.from(uniq).sort((a, b) => a.localeCompare(b))];
-}, [games]);
+  }, [platformOptions, platform]);
 
-// Mevcut seçili değer listede yoksa All’a çek (opsiyonel)
-useEffect(() => {
-  if (platform !== "All Platforms" && !platformOptions.includes(platform)) {
-    setPlatform("All Platforms");
-  }
-}, [platformOptions, platform]);
+  useEffect(() => {
+    if (developer !== "All Developers" && !developerOptions.includes(developer)) {
+      setDeveloper("All Developers");
+    }
+  }, [developerOptions, developer]);
 
-// Seçili değer listede yoksa "All ..." a geri döndür (opsiyonel güvenlik)
-useEffect(() => {
-  if (developer !== "All Developers" && !developerOptions.includes(developer)) {
-    setDeveloper("All Developers");
-  }
-}, [developerOptions, developer]);
+  useEffect(() => {
+    if (genre !== "All Genres" && !genreOptions.includes(genre)) {
+      setGenre("All Genres");
+    }
+  }, [genreOptions, genre]);
 
-useEffect(() => {
-  if (genre !== "All Genres" && !genreOptions.includes(genre)) {
-    setGenre("All Genres");
-  }
-}, [genreOptions, genre]);
-
+  // Veri çek
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -129,34 +118,90 @@ useEffect(() => {
       }
     })();
     return () => { alive = false; };
-    // query değiştiğinde tekrar getir (istersen debounce ekleyebilirsin)
   }, [query]);
 
-  // Ön uçta ek filtre/sort (developer/platform/genre/ sort) – backend’e taşımak istersen sonra taşırız
+  // --- ÖNCE shown ---
   const shown = useMemo(() => {
     let list = games;
 
     if (developer !== "All Developers") {
       list = list.filter(x => (x.developer || "").toLowerCase() === developer.toLowerCase());
     }
-
     if (platform !== "All Platforms") {
-      
-       list = list.filter(x => x.platforms?.includes(platform));
+      list = list.filter(x => x.platforms?.includes(platform));
     }
-
     if (genre !== "All Genres") {
       list = list.filter(x => (x.genres || []).includes(genre));
     }
-
     if (sort === "Newest First") {
-      list = [...list].sort((a,b) => new Date(b.release || 0) - new Date(a.release || 0));
+      list = [...list].sort((a, b) => new Date(b.release || 0) - new Date(a.release || 0));
     } else {
-      list = [...list].sort((a,b) => new Date(a.release || 0) - new Date(b.release || 0));
+      list = [...list].sort((a, b) => new Date(a.release || 0) - new Date(b.release || 0));
     }
-
     return list;
   }, [games, developer, platform, genre, sort]);
+
+  // --- SONRA allSelected ---
+  const allSelected = useMemo(() => {
+    if (shown.length === 0) return false;
+    return shown.every(x => selected.has(x.id));
+  }, [shown, selected]);
+
+  // --- Seçim yardımcıları ---
+  const toggleRow = (id) => {
+    setSelected(prev => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      return s;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(shown.map(x => x.id)));
+  };
+
+  // Başlık checkbox'ı için indeterminate
+  const headChkRef = useRef(null);
+  useEffect(() => {
+    if (!headChkRef.current) return;
+    headChkRef.current.indeterminate = selected.size > 0 && !allSelected;
+  }, [selected, allSelected]);
+
+  // --- Silme işlemleri ---
+  const deleteOne = async (id, title) => {
+    if (!window.confirm(`Delete "${title}"?`)) return;
+
+    // Optimistic UI
+    setGames(prev => prev.filter(x => x.id !== id));
+    // Backend endpoint yoksa bu istek 404 dönebilir; try/catch ile yutuyoruz
+    try {
+      await API.delete(`/admin/games/${id}`);
+    } catch (e) {
+      // opsiyonel: geri al veya toast göster
+    }
+  };
+
+  const onDeleteSelected = async () => {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Delete ${selected.size} selected game(s)?`)) return;
+
+    const ids = Array.from(selected);
+
+    // Optimistic UI
+    setGames(prev => prev.filter(x => !selected.has(x.id)));
+    setSelected(new Set());
+
+    // Backend toplu silme yoksa tek tek dene; 404'leri yut
+    try {
+      await Promise.all(ids.map(id =>
+        API.delete(`/admin/games/${id}`).catch(() => null)
+      ));
+    } catch (e) {
+      // opsiyonel: toast
+    }
+  };
 
   const totalText = `${shown.length} game${shown.length !== 1 ? "s" : ""}`;
 
@@ -175,35 +220,34 @@ useEffect(() => {
         </div>
 
         <div className="filters">
-  {/* DEVELOPER: dinamik */}
-  <select value={developer} onChange={(e) => setDeveloper(e.target.value)}>
-    {developerOptions.map(opt => (
-      <option key={opt}>{opt}</option>
-    ))}
-  </select>
+          {/* DEVELOPER */}
+          <select value={developer} onChange={(e) => setDeveloper(e.target.value)}>
+            {developerOptions.map(opt => (
+              <option key={opt}>{opt}</option>
+            ))}
+          </select>
 
-  {/* PLATFORM: şimdilik sabit; API’ye platform isimleri ekleyince benzer şekilde dinamik yaparız */}
-  <select value={platform} onChange={(e) => setPlatform(e.target.value)}>
-  {platformOptions.map(opt => (
-    <option key={opt}>{opt}</option>
-  ))}
-</select>
+          {/* PLATFORM */}
+          <select value={platform} onChange={(e) => setPlatform(e.target.value)}>
+            {platformOptions.map(opt => (
+              <option key={opt}>{opt}</option>
+            ))}
+          </select>
 
-  {/* GENRE: dinamik */}
-  <select value={genre} onChange={(e) => setGenre(e.target.value)}>
-    {genreOptions.map(opt => (
-      <option key={opt}>{opt}</option>
-    ))}
-  </select>
+          {/* GENRE */}
+          <select value={genre} onChange={(e) => setGenre(e.target.value)}>
+            {genreOptions.map(opt => (
+              <option key={opt}>{opt}</option>
+            ))}
+          </select>
 
-  <select value={sort} onChange={(e) => setSort(e.target.value)}>
-    <option>Newest First</option>
-    <option>Oldest First</option>
-  </select>
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option>Newest First</option>
+            <option>Oldest First</option>
+          </select>
 
-  <div className="total">{loading ? "Loading..." : totalText}</div>
-</div>
-
+          <div className="total">{loading ? "Loading..." : totalText}</div>
+        </div>
       </div>
 
       {/* Hata mesajı */}
@@ -222,9 +266,10 @@ useEffect(() => {
                 <th className="th-check">
                   <input
                     type="checkbox"
-                    checked={checked}
-                    onChange={(e) => setChecked(e.target.checked)}
-                    aria-label="Select row"
+                    ref={headChkRef}
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    aria-label="Select all rows"
                   />
                 </th>
                 <th>Cover</th>
@@ -248,9 +293,9 @@ useEffect(() => {
                     <td className="td-check">
                       <input
                         type="checkbox"
-                        checked={checked}
-                        onChange={(e) => setChecked(e.target.checked)}
-                        aria-label="Select row"
+                        checked={selected.has(g.id)}
+                        onChange={() => toggleRow(g.id)}
+                        aria-label={`Select ${g.title}`}
                       />
                     </td>
                     <td className="td-cover">
@@ -267,7 +312,11 @@ useEffect(() => {
                       <button className="icon-btn" title="Edit" onClick={() => alert(`Edit ${g.title}`)}>
                         <IconEdit />
                       </button>
-                      <button className="icon-btn danger" title="Delete" onClick={() => alert(`Delete ${g.title}`)}>
+                      <button
+                        className="icon-btn danger"
+                        title="Delete"
+                        onClick={() => deleteOne(g.id, g.title)}
+                      >
                         <IconTrash />
                       </button>
                     </td>
@@ -293,14 +342,18 @@ useEffect(() => {
           </div>
 
           <div className="bulk-actions">
-            <button className="btn secondary" disabled={!checked} onClick={() => alert("Delete selected")}>
+            <button
+              className="btn secondary"
+              disabled={selected.size === 0}
+              onClick={onDeleteSelected}
+            >
               Delete Selected
             </button>
-            <button className="btn primary" onClick={() => alert("Add game")}>
+           <button className="btn primary" onClick={() => setAddOpen(true)}>
               Add Game
             </button>
           </div>
-
+              
           <div className="pager">
             <button className="btn small" disabled>Prev</button>
             <span className="page-indicator">Page 1 of 1</span>
@@ -308,6 +361,15 @@ useEffect(() => {
           </div>
         </div>
       </div>
+      
+       {/* MODAL — en sona ekle */}
+      <AddGameModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onAdded={(newGame) => setGames(prev => [newGame, ...prev])}
+      />
     </div>
+
+    
   );
 }
