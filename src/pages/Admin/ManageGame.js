@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import API from "../../services/api.js";
 import "../../styles/pages/admin/_manage-game.scss";
 import AddGameModal from "./AddGameModal.js";
@@ -42,9 +42,31 @@ export default function ManageGame() {
   const skip = 0;
   const take = 100;
 
+  // ----- REFETCH -----
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await API.get("/admin/games", {
+        params: { skip, take, q: query || undefined }
+      });
+      setGames(res.data || []);
+    } catch (e) {
+      setErr(e);
+      setGames([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [query]); // skip/take sabit, dependency gerekmiyor
+
+  // İlk yükleme + query değişince listeyi çek
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
   // --- OPTION listeleri ---
   const developerOptions = useMemo(() => {
-    const uniq = new Map(); // lower-case key → orijinal yazım
+    const uniq = new Map();
     for (const g of games) {
       const d = (g?.developer || "").trim();
       if (!d) continue;
@@ -96,29 +118,6 @@ export default function ManageGame() {
       setGenre("All Genres");
     }
   }, [genreOptions, genre]);
-
-  // Veri çek
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      setLoading(true);
-      setErr(null);
-      try {
-        const res = await API.get("/admin/games", {
-          params: { skip, take, q: query || undefined }
-        });
-        if (alive) setGames(res.data || []);
-      } catch (e) {
-        if (alive) {
-          setErr(e);
-          setGames([]);
-        }
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, [query]);
 
   // --- ÖNCE shown ---
   const shown = useMemo(() => {
@@ -175,11 +174,10 @@ export default function ManageGame() {
 
     // Optimistic UI
     setGames(prev => prev.filter(x => x.id !== id));
-    // Backend endpoint yoksa bu istek 404 dönebilir; try/catch ile yutuyoruz
     try {
       await API.delete(`/admin/games/${id}`);
-    } catch (e) {
-      // opsiyonel: geri al veya toast göster
+    } catch {
+      // opsiyonel: geri al veya toast
     }
   };
 
@@ -188,17 +186,14 @@ export default function ManageGame() {
     if (!window.confirm(`Delete ${selected.size} selected game(s)?`)) return;
 
     const ids = Array.from(selected);
-
-    // Optimistic UI
     setGames(prev => prev.filter(x => !selected.has(x.id)));
     setSelected(new Set());
 
-    // Backend toplu silme yoksa tek tek dene; 404'leri yut
     try {
       await Promise.all(ids.map(id =>
         API.delete(`/admin/games/${id}`).catch(() => null)
       ));
-    } catch (e) {
+    } catch {
       // opsiyonel: toast
     }
   };
@@ -349,11 +344,11 @@ export default function ManageGame() {
             >
               Delete Selected
             </button>
-           <button className="btn primary" onClick={() => setAddOpen(true)}>
+            <button className="btn primary" onClick={() => setAddOpen(true)}>
               Add Game
             </button>
           </div>
-              
+
           <div className="pager">
             <button className="btn small" disabled>Prev</button>
             <span className="page-indicator">Page 1 of 1</span>
@@ -361,15 +356,17 @@ export default function ManageGame() {
           </div>
         </div>
       </div>
-      
-       {/* MODAL — en sona ekle */}
+
+      {/* MODAL */}
       <AddGameModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        onAdded={(newGame) => setGames(prev => [newGame, ...prev])}
+        onAdded={async () => {
+          await refetch();         // ekledikten sonra listeyi tazele
+          setSelected(new Set());  // seçimleri temizle
+          setAddOpen(false);       // modal kapat
+        }}
       />
     </div>
-
-    
   );
 }

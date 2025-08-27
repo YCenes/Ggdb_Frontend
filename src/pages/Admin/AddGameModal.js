@@ -1,76 +1,170 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import API from "../../services/api.js";
 
 /**
- * AddGameModal (IGDB + RAWG Merge → Preview → Commit)
+ * AddGameModal
+ *  - Mode "auto": Single search → strict pair IGDB+RAWG → Preview → Commit
+ *  - Mode "manual": Full form → Commit as MergedGameDto
  *
  * Props:
  *  - open: boolean
  *  - onClose: () => void
- *  - onAdded: (newGameMinimal) => void   // tabloya eklemek için minimal obje
+ *  - onAdded: (newGameMinimal) => void
  */
 export default function AddGameModal({ open, onClose, onAdded }) {
-  const [igdbQ, setIgdbQ] = useState("");
-  const [rawgQ, setRawgQ] = useState("");
-  const [igdbLoading, setIgdbLoading] = useState(false);
-  const [rawgLoading, setRawgLoading] = useState(false);
-  const [igdbResults, setIgdbResults] = useState([]);
-  const [rawgResults, setRawgResults] = useState([]);
+  const [mode, setMode] = useState("auto"); // "auto" | "manual"
 
-  const [igdbSel, setIgdbSel] = useState(null); // { id, name }
-  const [rawgSel, setRawgSel] = useState(null); // { id, name }
-
+  // ====== AUTO (strict) state ======
+  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState([]); // [{label, igdbId, rawgId, score}]
+  const [picked, setPicked] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [merged, setMerged] = useState(null); // GameMerge.MergedGameDto
+  const [merged, setMerged] = useState(null);
 
-  const canPreview = useMemo(() => !!(igdbSel?.id && rawgSel?.id), [igdbSel, rawgSel]);
+  // ====== MANUAL state ======
+  const [mName, setMName] = useState("");
+  const [mRelease, setMRelease] = useState(""); // yyyy-mm-dd
+  const [mCover, setMCover] = useState("");
+  const [mDeveloper, setMDeveloper] = useState("");
+  const [mPublisher, setMPublisher] = useState("");
+  const [mGenres, setMGenres] = useState("");
+  const [mPlatforms, setMPlatforms] = useState("");
+  const [mAbout, setMAbout] = useState("");
+  const [mAgeRatings, setMAgeRatings] = useState("");
+  const [mTtbH, setMTtbH] = useState(""); // Hastily
+  const [mTtbN, setMTtbN] = useState(""); // Normally
+  const [mTtbC, setMTtbC] = useState(""); // Completely
+  const [mIfaceLangs, setMIfaceLangs] = useState("");
+  const [mAudioLangs, setMAudioLangs] = useState("");
+  const [mSubtitles, setMSubtitles] = useState("");
+  const [mTags, setMTags] = useState("");
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualError, setManualError] = useState(null);
 
   if (!open) return null;
 
-  // ---- searchers ----
-  const searchIGDB = async () => {
-    if (!igdbQ.trim()) return;
-    setIgdbLoading(true); setIgdbResults([]);
-    try {
-      const { data } = await API.get("/igdb/search", {
-        params: { q: igdbQ, page: 1, pageSize: 20, dedupe: true, details: false }
-      });
-      const items = (data?.items || []).map(x => ({ id: x.id ?? x.Id, name: x.name ?? x.Name }));
-      setIgdbResults(items);
-    } finally { setIgdbLoading(false); }
+  // ---------- utils ----------
+  const normalize = (s) =>
+    (s || "")
+      .toLowerCase()
+      .replace(/[™®©]/g, "")
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const lev = (a, b) => {
+    a = a || ""; b = b || "";
+    const n = a.length, m = b.length;
+    if (n === 0) return m;
+    if (m === 0) return n;
+    const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = 0; i <= n; i++) dp[i][0] = i;
+    for (let j = 0; j <= m; j++) dp[0][j] = j;
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      }
+    }
+    return dp[n][m];
   };
 
-  const searchRAWG = async () => {
-    if (!rawgQ.trim()) return;
-    setRawgLoading(true); setRawgResults([]);
-    try {
-      const { data } = await API.get("/rawg/search", {
-        params: { q: rawgQ, page: 1, pageSize: 20 }
-      });
-      const items = (data?.items || []).map(x => ({ id: x.id ?? x.Id, name: x.name ?? x.Name }));
-      setRawgResults(items);
-    } finally { setRawgLoading(false); }
+  const similarity = (a, b) => {
+    const A = normalize(a);
+    const B = normalize(b);
+    if (!A || !B) return 0;
+    if (A === B) return 1;
+    if (A.includes(B) || B.includes(A)) return 0.95;
+    const d = lev(A, B);
+    const maxLen = Math.max(A.length, B.length);
+    return 1 - d / Math.max(1, maxLen);
   };
 
-  // ---- preview merge ----
+  const parseCsv = (s) =>
+    (s || "")
+      .split(",")
+      .map(x => x.trim())
+      .filter(Boolean);
+
+  const toIntOrNull = (v) => {
+    if (v === null || v === undefined || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.trunc(n) : null;
+  };
+
+  // ---------- AUTO: search (STRICT) ----------
+  const runSearch = async () => {
+    const term = q.trim();
+    if (!term) return;
+    setLoading(true);
+    setResults([]);
+    setPicked(null);
+    setMerged(null);
+
+    try {
+      const [igdbRes, rawgRes] = await Promise.all([
+        API.get("/igdb/search", { params: { q: term, page: 1, pageSize: 20, dedupe: true, details: false } }),
+        API.get("/rawg/search", { params: { q: term, page: 1, pageSize: 20 } }),
+      ]);
+
+      const igdbItems = (igdbRes?.data?.items || []).map(x => ({ id: x.id ?? x.Id, name: x.name ?? x.Name }));
+      const rawgItems = (rawgRes?.data?.items || []).map(x => ({ id: x.id ?? x.Id, name: x.name ?? x.Name }));
+
+      const pairs = [];
+      for (const g of igdbItems) {
+        let best = null, maxS = 0;
+        for (const r of rawgItems) {
+          const s = similarity(g.name, r.name);
+          if (s > maxS) { maxS = s; best = r; }
+        }
+        if (best && maxS >= 0.93) {
+          const label = (g.name?.length || 0) >= (best.name?.length || 0) ? g.name : best.name;
+          pairs.push({ label, igdbId: g.id, rawgId: best.id, score: maxS });
+        }
+      }
+
+      pairs.sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
+      const seen = new Set();
+      const uniq = [];
+      for (const p of pairs) {
+        const key = normalize(p.label);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        uniq.push(p);
+      }
+
+      setResults(uniq);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------- AUTO: preview ----------
   const doPreview = async () => {
-    if (!canPreview) return;
-    setPreviewLoading(true); setMerged(null);
+    if (!picked?.igdbId || !picked?.rawgId) return;
+    setPreviewLoading(true);
+    setMerged(null);
     try {
       const { data } = await API.get("/merge/preview", {
-        params: { igdbId: igdbSel.id, rawgId: rawgSel.id }
+        params: { igdbId: picked.igdbId, rawgId: picked.rawgId }
       });
       setMerged(data);
-    } finally { setPreviewLoading(false); }
+    } finally {
+      setPreviewLoading(false);
+    }
   };
 
-  // ---- commit (save) ----
-  const doCommit = async () => {
-    if (!merged) return;
-    // PreviewImportController → POST /api/import/preview/one (MergedGameDto)
+  // ---------- AUTO: commit (preview şart) ----------
+  const doCommitAuto = async () => {
+    if (!picked?.igdbId || !picked?.rawgId) return;
+    if (!merged) {
+      await doPreview();
+      if (!merged) return;
+    }
+
     const { data } = await API.post("/import/preview/one", merged);
 
-    // Tablo için minimal obje (AdminController /admin/games dto’su ile uyumlu)
     const minimal = {
       id: data?.id ?? merged.Id ?? "temp",
       cover: merged.MainImage || null,
@@ -82,118 +176,266 @@ export default function AddGameModal({ open, onClose, onAdded }) {
       story: merged.About || ""
     };
 
-    if (onAdded) onAdded(minimal);
-    if (onClose) onClose();
-    resetModal();
+    onAdded?.(minimal);
+    handleClose();
   };
 
-  const resetModal = () => {
-    setIgdbQ(""); setRawgQ("");
-    setIgdbResults([]); setRawgResults([]);
-    setIgdbSel(null); setRawgSel(null);
-    setMerged(null); setPreviewLoading(false);
+  // ---------- MANUAL: commit ----------
+  const doCommitManual = async () => {
+    setManualError(null);
+
+    // basit kontroller
+    if (!mName.trim()) {
+      setManualError("Name zorunlu.");
+      return;
+    }
+
+    // MergedGameDto formatı (backend’ine göre key’leri senin kullandığın casing’de tuttum)
+    const dto = {
+      Name: mName.trim(),
+      ReleaseDate: mRelease ? new Date(mRelease).toISOString() : null, // backend DateTime? kabul ediyorsa ISO ok
+      MainImage: mCover || null,
+      Developer: mDeveloper || null,
+      Publisher: mPublisher || null,
+      Genres: parseCsv(mGenres),           // ["RPG","Adventure"]
+      Platforms: parseCsv(mPlatforms),     // ["PC","PS5"]
+      About: mAbout || null,
+      AgeRatings: parseCsv(mAgeRatings),   // ["PEGI 18","M"]
+      TimeToBeat: {
+        Hastily: toIntOrNull(mTtbH),
+        Normally: toIntOrNull(mTtbN),
+        Completely: toIntOrNull(mTtbC),
+      },
+      InterfaceLanguages: parseCsv(mIfaceLangs),
+      AudioLanguages: parseCsv(mAudioLangs),
+      Subtitles: parseCsv(mSubtitles),
+      Tags: parseCsv(mTags),
+      // İstersen popularity/metacritic/ggdbRating burada da ekleyebilirsin:
+      // Popularity: null, Metacritic: null, GgDbRating: null,
+    };
+
+    try {
+      setManualSaving(true);
+      const { data } = await API.post("/import/preview/one", dto);
+
+      const minimal = {
+        id: data?.id ?? "temp",
+        cover: dto.MainImage || null,
+        title: dto.Name || "",
+        release: dto.ReleaseDate || null,
+        developer: dto.Developer || dto.Publisher || "",
+        genres: dto.Genres || [],
+        platforms: dto.Platforms || [],
+        story: dto.About || ""
+      };
+
+      onAdded?.(minimal);
+      handleClose();
+    } catch (e) {
+      setManualError(String(e?.response?.data || e?.message || e));
+    } finally {
+      setManualSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    // reset all
+    setMode("auto");
+
+    setQ(""); setLoading(false); setResults([]); setPicked(null);
+    setPreviewLoading(false); setMerged(null);
+
+    setMName(""); setMRelease(""); setMCover("");
+    setMDeveloper(""); setMPublisher("");
+    setMGenres(""); setMPlatforms(""); setMAbout("");
+    setMAgeRatings(""); setMTtbH(""); setMTtbN(""); setMTtbC("");
+    setMIfaceLangs(""); setMAudioLangs(""); setMSubtitles(""); setMTags("");
+    setManualSaving(false); setManualError(null);
+
+    onClose?.();
   };
 
   return (
     <div className="modal-backdrop">
       <div className="modal-card">
         <div className="modal-head">
-          <h3>Add Game (Merge IGDB + RAWG)</h3>
-          <button className="icon-btn" onClick={() => { resetModal(); onClose?.(); }} aria-label="Close">✕</button>
+          <h3>Add Game</h3>
+          <div className="tabs">
+            <button
+              className={`tab ${mode === "auto" ? "active" : ""}`}
+              onClick={() => setMode("auto")}
+            >
+              Auto-merge (IGDB + RAWG)
+            </button>
+            <button
+              className={`tab ${mode === "manual" ? "active" : ""}`}
+              onClick={() => setMode("manual")}
+            >
+              Manual
+            </button>
+          </div>
+          <button className="icon-btn" onClick={handleClose} aria-label="Close">✕</button>
         </div>
 
-        {/* 2 kolon: IGDB ve RAWG arama/seçim */}
-        <div className="merge-grid">
-          <div className="pane">
-            <div className="pane-title">IGDB</div>
-            <div className="search-row">
+        {mode === "auto" ? (
+          <>
+            <div className="single-search">
               <input
-                value={igdbQ}
-                onChange={e => setIgdbQ(e.target.value)}
-                placeholder="Search IGDB (e.g., Sims)…"
-                onKeyDown={e => { if (e.key === "Enter") searchIGDB(); }}
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                placeholder="Type a game name (e.g., The Sims 4)…"
+                onKeyDown={e => { if (e.key === "Enter") runSearch(); }}
               />
-              <button className="btn primary" onClick={searchIGDB} disabled={igdbLoading}>
-                {igdbLoading ? "Searching…" : "Search"}
+              <button className="btn primary" onClick={runSearch} disabled={loading}>
+                {loading ? "Searching…" : "Search"}
               </button>
             </div>
 
             <div className="results-list">
-              {igdbResults.length === 0 ? (
-                <div className="empty-hint">No results</div>
-              ) : igdbResults.map(it => (
-                <label key={`igdb_${it.id}`} className={`result-item ${igdbSel?.id === it.id ? "active" : ""}`}>
-                  <input
-                    type="radio"
-                    name="igdbPick"
-                    checked={igdbSel?.id === it.id}
-                    onChange={() => setIgdbSel(it)}
-                  />
-                  <span className="ri-name">{it.name}</span>
-                </label>
-              ))}
+              {loading ? (
+                <div className="empty-hint">Searching…</div>
+              ) : results.length === 0 ? (
+                <div className="empty-hint">
+                  {q.trim() ? "No strict matches (need IGDB+RAWG pair ≥ 0.93)" : "No results"}
+                </div>
+              ) : (
+                results.map((row, i) => (
+                  <label
+                    key={`${row.label}_${row.igdbId}_${row.rawgId}_${i}`}
+                    className={`result-item ${picked?.igdbId === row.igdbId && picked?.rawgId === row.rawgId ? "active" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="gamePick"
+                      checked={picked?.igdbId === row.igdbId && picked?.rawgId === row.rawgId}
+                      onChange={() => { setPicked(row); setMerged(null); }}
+                    />
+                    <span className="ri-name">{row.label}</span>
+                    <span className="badge ok">Match {(row.score * 100).toFixed(0)}%</span>
+                  </label>
+                ))
+              )}
             </div>
-          </div>
 
-          <div className="pane">
-            <div className="pane-title">RAWG</div>
-            <div className="search-row">
-              <input
-                value={rawgQ}
-                onChange={e => setRawgQ(e.target.value)}
-                placeholder="Search RAWG (e.g., Sims)…"
-                onKeyDown={e => { if (e.key === "Enter") searchRAWG(); }}
-              />
-              <button className="btn primary" onClick={searchRAWG} disabled={rawgLoading}>
-                {rawgLoading ? "Searching…" : "Search"}
+            <div className="preview-actions">
+              <button className="btn secondary" onClick={doPreview} disabled={!picked || previewLoading}>
+                {previewLoading ? "Merging…" : "Preview & Merge"}
+              </button>
+              <button className="btn primary" onClick={doCommitAuto} disabled={!picked}>
+                Add (Commit)
               </button>
             </div>
 
-            <div className="results-list">
-              {rawgResults.length === 0 ? (
-                <div className="empty-hint">No results</div>
-              ) : rawgResults.map(it => (
-                <label key={`rawg_${it.id}`} className={`result-item ${rawgSel?.id === it.id ? "active" : ""}`}>
-                  <input
-                    type="radio"
-                    name="rawgPick"
-                    checked={rawgSel?.id === it.id}
-                    onChange={() => setRawgSel(it)}
-                  />
-                  <span className="ri-name">{it.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
+            {merged && (
+              <div className="merge-preview">
+                <div className="mp-left">
+                  {merged.MainImage
+                    ? <img src={merged.MainImage} alt="cover" />
+                    : <div className="no-cover">No Cover</div>}
+                </div>
+                <div className="mp-right">
+                  <div className="mp-title">{merged.Name}</div>
+                  <div className="mp-row"><b>Release:</b> {merged.ReleaseDate ? new Date(merged.ReleaseDate).toISOString().slice(0,10) : "—"}</div>
+                  <div className="mp-row"><b>Developer:</b> {merged.Developer || "—"}</div>
+                  <div className="mp-row"><b>Publisher:</b> {merged.Publisher || "—"}</div>
+                  <div className="mp-row"><b>Genres:</b> {(merged.Genres || []).join(", ") || "—"}</div>
+                  <div className="mp-row"><b>Platforms:</b> {(merged.Platforms || []).join(", ") || "—"}</div>
+                  <div className="mp-row"><b>About:</b> {merged.About || "—"}</div>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* MANUAL FORM */}
+            <div className="form-grid">
+              <div className="field">
+                <label>Name *</label>
+                <input value={mName} onChange={e => setMName(e.target.value)} placeholder="The Witcher 3: Wild Hunt" />
+              </div>
 
-        {/* Preview & Commit */}
-        <div className="preview-actions">
-          <button className="btn secondary" onClick={doPreview} disabled={!canPreview || previewLoading}>
-            {previewLoading ? "Merging…" : "Preview & Merge"}
-          </button>
-          <button className="btn primary" onClick={doCommit} disabled={!merged}>
-            Add (Commit)
-          </button>
-        </div>
+              <div className="field">
+                <label>Release (YYYY-MM-DD)</label>
+                <input value={mRelease} onChange={e => setMRelease(e.target.value)} placeholder="2015-05-19" />
+              </div>
 
-        {merged && (
-          <div className="merge-preview">
-            <div className="mp-left">
-              {merged.MainImage
-                ? <img src={merged.MainImage} alt="cover" />
-                : <div className="no-cover">No Cover</div>}
+              <div className="field">
+                <label>Cover URL</label>
+                <input value={mCover} onChange={e => setMCover(e.target.value)} placeholder="https://..." />
+              </div>
+
+              <div className="field">
+                <label>Developer</label>
+                <input value={mDeveloper} onChange={e => setMDeveloper(e.target.value)} placeholder="CD Projekt RED" />
+              </div>
+
+              <div className="field">
+                <label>Publisher</label>
+                <input value={mPublisher} onChange={e => setMPublisher(e.target.value)} placeholder="CD Projekt RED" />
+              </div>
+
+              <div className="field">
+                <label>Genres (comma-separated)</label>
+                <input value={mGenres} onChange={e => setMGenres(e.target.value)} placeholder="RPG, Adventure" />
+              </div>
+
+              <div className="field">
+                <label>Platforms (comma-separated)</label>
+                <input value={mPlatforms} onChange={e => setMPlatforms(e.target.value)} placeholder="PC, PS5, Xbox Series" />
+              </div>
+
+              <div className="field col-span-2">
+                <label>About / Story</label>
+                <textarea rows={4} value={mAbout} onChange={e => setMAbout(e.target.value)} placeholder="Short summary..." />
+              </div>
+
+              <div className="field">
+                <label>Age Ratings (comma-separated)</label>
+                <input value={mAgeRatings} onChange={e => setMAgeRatings(e.target.value)} placeholder="PEGI 18, M" />
+              </div>
+
+              <div className="field">
+                <label>TimeToBeat (Hastily / Normally / Completely)</label>
+                <div className="ttb-row">
+                  <input value={mTtbH} onChange={e => setMTtbH(e.target.value)} placeholder="25" />
+                  <input value={mTtbN} onChange={e => setMTtbN(e.target.value)} placeholder="60" />
+                  <input value={mTtbC} onChange={e => setMTtbC(e.target.value)} placeholder="90" />
+                </div>
+              </div>
+
+              <div className="field">
+                <label>Interface Languages (comma-separated)</label>
+                <input value={mIfaceLangs} onChange={e => setMIfaceLangs(e.target.value)} placeholder="English, Turkish" />
+              </div>
+
+              <div className="field">
+                <label>Audio Languages (comma-separated)</label>
+                <input value={mAudioLangs} onChange={e => setMAudioLangs(e.target.value)} placeholder="English" />
+              </div>
+
+              <div className="field">
+                <label>Subtitles (comma-separated)</label>
+                <input value={mSubtitles} onChange={e => setMSubtitles(e.target.value)} placeholder="English, Turkish" />
+              </div>
+
+              <div className="field">
+                <label>Tags (comma-separated)</label>
+                <input value={mTags} onChange={e => setMTags(e.target.value)} placeholder="Open World, Fantasy, Story Rich" />
+              </div>
             </div>
-            <div className="mp-right">
-              <div className="mp-title">{merged.Name}</div>
-              <div className="mp-row"><b>Release:</b> {merged.ReleaseDate ? new Date(merged.ReleaseDate).toISOString().slice(0,10) : "—"}</div>
-              <div className="mp-row"><b>Developer:</b> {merged.Developer || "—"}</div>
-              <div className="mp-row"><b>Publisher:</b> {merged.Publisher || "—"}</div>
-              <div className="mp-row"><b>Genres:</b> {(merged.Genres || []).join(", ") || "—"}</div>
-              <div className="mp-row"><b>Platforms:</b> {(merged.Platforms || []).join(", ") || "—"}</div>
-              <div className="mp-row"><b>About:</b> {merged.About || "—"}</div>
+
+            {manualError && (
+              <div className="card" style={{ marginTop: 8, padding: 10, border: "1px solid var(--line)" }}>
+                {manualError}
+              </div>
+            )}
+
+            <div className="preview-actions">
+              <button className="btn primary" onClick={doCommitManual} disabled={manualSaving}>
+                {manualSaving ? "Saving…" : "Add (Manual)"}
+              </button>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
