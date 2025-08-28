@@ -1,0 +1,338 @@
+/* =====================
+   SCSS – src/styles/pages/admin/_game-detail-admin.scss
+   ===================== */
+.gd-page {
+  --bg: #070b12;
+  --panel: #0e1522;
+  --panel-2: #0c1220;
+  --line: #1c2636;
+  --text: #e8eef8;
+  --muted: var(--text);
+  --muted-2: var(--text);
+  --accent: #6ca8ff;
+  --accent-2: #a78bfa;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --danger: #ef4444;
+  --card-radius: 14px;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+.gd-page {
+  min-height: 100vh;
+  background: radial-gradient(
+      1200px 1200px at 10% -10%,
+      #0a1322 0%,
+      transparent 60%
+    ),
+    radial-gradient(1000px 1000px at 110% 10%, #0a1322 0%, transparent 60%),
+    var(--bg);
+  color: var(--text);
+  padding: 24px;
+}
+
+/* HERO */
+.gd-hero {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.gd-hero-img {
+  width: 100%;
+  height: 340px;
+  object-fit: cover;
+  display: block;
+  filter: saturate(0.9);
+}
+
+/* STRIP */
+.gd-strip {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.gd-strip-col {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--card-radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.gd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gd-label {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+}
+.gd-value {
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.gd-value.id .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.purple {
+  background: var(--accent-2);
+}
+.gd-sub {
+  color: var(--muted-2);
+  font-size: 12px;
+}
+.gd-progress {
+  position: relative;
+  height: 10px;
+  background: #0a1020;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.gd-progress .bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--amber), #ffb84c);
+  width: 0;
+}
+.gd-progress .pct {
+  position: absolute;
+  right: 10px;
+  top: -22px;
+  color: #ffb84c;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* TITLE ROW */
+.gd-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 22px 0 8px;
+}
+.gd-title-row .left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.game-ico {
+  filter: grayscale(0.1);
+}
+.gd-title-row h1 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn.ghost {
+  background: transparent;
+}
+.btn.primary.outline {
+  border-color: #23417a;
+}
+.btn.warning {
+  background: #ffd16620;
+  border-color: #ffd16655;
+}
+.btn.success {
+  background: #1f4430;
+  border-color: #2c6b49;
+}
+.btn + .btn {
+  margin-left: 8px;
+}
+
+/* TABS */
+.gd-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0 0;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+.tab {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab.active {
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-bottom: none;
+}
+
+/* FORM */
+.gd-form {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+.gd-form .grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.gd-form label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.gd-form input,
+.gd-form textarea {
+  width: 100%;
+  background: #0c1322;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  outline: none;
+}
+.gd-form textarea {
+  resize: vertical;
+}
+
+.score {
+  grid-column: span 2;
+}
+.score-grid {
+  display: grid;
+  grid-template-columns: 220px 220px;
+  gap: 12px;
+}
+.score-grid span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.trio {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+/* ACTIONS */
+.gd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  .gd-strip {
+    grid-template-columns: 1fr;
+  }
+  .gd-form .grid {
+    grid-template-columns: 1fr;
+  }
+  .score-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .trio {
+    grid-template-columns: 1fr;
+  }
+  .gd-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* tag input mock */
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: #0c1322;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+.tag-input input {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  outline: none;
+  flex: 1;
+}
+.chip {
+  background: #222f44;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+
+
+/* ==== Modal içinde metin rengi: --text ==== */
+.bm-sheet {
+  /* modal içi muted metinleri de aynı tona çek */
+  --muted: var(--text);
+  --muted-2: var(--text);
+  color: var(--text);
+}
+
+.bm-sheet * {
+  color: inherit;            /* içerde her şey modalın rengini miras alsın */
+  opacity: 1;                /* olası kısık opaklıkları sıfırla */
+}
+
+/* input & textarea + placeholder */
+.bm-sheet .gd-form input,
+.bm-sheet .gd-form textarea {
+  color: var(--text);
+  border-color: var(--line);
+  font-weight: 500;          /* opsiyonel: okunurluğu artırır */
+}
+.bm-sheet .gd-form input::placeholder,
+.bm-sheet .gd-form textarea::placeholder {
+  color: var(--text);
+  opacity: .7;
+}
+
+/* label, alt yazı, chip */
+.bm-sheet .gd-label,
+.bm-sheet .gd-sub,
+.bm-sheet .chip {
+  color: var(--text);
+}
+.bm-sheet .chip {
+  background: #162032;
+  border-color: gold;
+  color: gold;   /* yazılar modalın text rengi (#e8eef8 veya #fff) */
+  cursor: pointer;
+}
+

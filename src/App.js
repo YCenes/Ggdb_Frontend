@@ -22,6 +22,7 @@ import RequireAdmin from "./components/routing/RequireAdmin.js";
 
 import "./styles/main.scss";
 import ManageGame from "./pages/Admin/ManageGame.js";
+import GameDetailAdmin from "./pages/Admin/AdminDetails.js";
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
           >
             <Route index element={<Overview />} />
              <Route path="managegame" element={<ManageGame />} />
+             <Route path="gamedetail" element={<GameDetailAdmin />} />
           </Route>
 
           {/* 404 */}

@@ -4,7 +4,7 @@ import API from "../../services/api.js";
 /**
  * AddGameModal
  *  - Mode "auto": Single search → strict pair IGDB+RAWG → Preview → Commit
- *  - Mode "manual": Full form → Commit as MergedGameDto
+ *  - Mode "manual": Full form → Commit as MergedGameDto (tüm alanlar, Createdat YOK)
  *
  * Props:
  *  - open: boolean
@@ -22,23 +22,49 @@ export default function AddGameModal({ open, onClose, onAdded }) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [merged, setMerged] = useState(null);
 
-  // ====== MANUAL state ======
+  // ====== MANUAL state (DTO'daki tüm alanlar; Createdat hariç) ======
   const [mName, setMName] = useState("");
-  const [mRelease, setMRelease] = useState(""); // yyyy-mm-dd
+  const [mRelease, setMRelease] = useState(""); // yyyy-mm-dd veya ISO
   const [mCover, setMCover] = useState("");
   const [mDeveloper, setMDeveloper] = useState("");
   const [mPublisher, setMPublisher] = useState("");
+
+  const [mMetacritic, setMMetacritic] = useState("");
+  const [mGgDbRating, setMGgDbRating] = useState("");
+  const [mPopularity, setMPopularity] = useState("");
+
   const [mGenres, setMGenres] = useState("");
   const [mPlatforms, setMPlatforms] = useState("");
   const [mAbout, setMAbout] = useState("");
+
   const [mAgeRatings, setMAgeRatings] = useState("");
+  const [mDlcs, setMDlcs] = useState("");
+  const [mTags, setMTags] = useState("");
+
+  const [mAudioLangs, setMAudioLangs] = useState("");
+  const [mSubtitles, setMSubtitles] = useState("");
+  const [mIfaceLangs, setMIfaceLangs] = useState("");
+  const [mContentWarnings, setMContentWarnings] = useState("");
+
+  const [mImages, setMImages] = useState("");
+
+  const [mMinReqText, setMMinReqText] = useState("");
+  const [mRecReqText, setMRecReqText] = useState("");
+
+  const [mEngines, setMEngines] = useState("");
+  const [mAwards, setMAwards] = useState("");
+
+  const [mCast, setMCast] = useState("");
+  const [mCrew, setMCrew] = useState("");
+
+  // TimeToBeat
   const [mTtbH, setMTtbH] = useState(""); // Hastily
   const [mTtbN, setMTtbN] = useState(""); // Normally
   const [mTtbC, setMTtbC] = useState(""); // Completely
-  const [mIfaceLangs, setMIfaceLangs] = useState("");
-  const [mAudioLangs, setMAudioLangs] = useState("");
-  const [mSubtitles, setMSubtitles] = useState("");
-  const [mTags, setMTags] = useState("");
+
+  // StoreLinks: her satır "Name | URL"
+  const [mStoreLinks, setMStoreLinks] = useState("");
+
   const [manualSaving, setManualSaving] = useState(false);
   const [manualError, setManualError] = useState(null);
 
@@ -87,10 +113,58 @@ export default function AddGameModal({ open, onClose, onAdded }) {
       .map(x => x.trim())
       .filter(Boolean);
 
+  const parseLines = (s) =>
+    (s || "")
+      .split(/\r?\n/)
+      .map(x => x.trim())
+      .filter(Boolean);
+
   const toIntOrNull = (v) => {
     if (v === null || v === undefined || v === "") return null;
     const n = Number(v);
     return Number.isFinite(n) ? Math.trunc(n) : null;
+  };
+
+  // YYYY-MM-DD veya ISO → ISO string (DateTime?), yoksa null
+  const safeIsoDateTime = (s) => {
+    const v = (s || "").trim();
+    if (!v) return null;
+    const isoLike = /^\d{4}-\d{2}-\d{2}(T.*)?$/i.test(v) ? v : null;
+    const dt = new Date((isoLike || v));
+    return isNaN(dt.getTime()) ? null : dt.toISOString();
+  };
+
+  // "Name | URL" satırları → { Store, Name, Url }
+  const parseStoreLinks = (s) => {
+    const rows = parseLines(s);
+    const out = [];
+    for (const row of rows) {
+      const [left, right] = row.split("|").map(x => (x || "").trim());
+      if (!left && !right) continue;
+      const name = left || "Store";
+      const url = right || "";
+      if (!url) continue;
+      out.push({ Store: name, Name: name, Url: url });
+    }
+    return out;
+  };
+
+  const extractApiError = (err) => {
+    const d = err?.response?.data;
+    if (typeof d === "string") return d;
+    if (d?.message) return d.message;
+    if (d?.errors && typeof d.errors === "object") {
+      const parts = [];
+      for (const [k, arr] of Object.entries(d.errors)) {
+        const line = Array.isArray(arr) ? arr.join(" • ") : String(arr);
+        parts.push(`${k}: ${line}`);
+      }
+      if (parts.length) return parts.join(" | ");
+    }
+    if (d?.title || d?.detail)
+      return `${d.title ?? "Error"}${d.detail ? `: ${d.detail}` : ""}`;
+    if (err?.message) return err.message;
+    try { return JSON.stringify(d ?? err); } catch { return "Unknown error"; }
   };
 
   // ---------- AUTO: search (STRICT) ----------
@@ -163,60 +237,87 @@ export default function AddGameModal({ open, onClose, onAdded }) {
       if (!merged) return;
     }
 
-    const { data } = await API.post("/import/preview/one", merged);
+    try {
+      const { data } = await API.post("/import/preview/one", merged, {
+        headers: { "Content-Type": "application/json" },
+      });
 
-    const minimal = {
-      id: data?.id ?? merged.Id ?? "temp",
-      cover: merged.MainImage || null,
-      title: merged.Name || "",
-      release: merged.ReleaseDate || null,
-      developer: merged.Developer || merged.Publisher || "",
-      genres: merged.Genres || [],
-      platforms: merged.Platforms || [],
-      story: merged.About || ""
-    };
+      const minimal = {
+        id: data?.id ?? merged.Id ?? "temp",
+        cover: merged.MainImage || null,
+        title: merged.Name || "",
+        release: merged.ReleaseDate || null,
+        developer: merged.Developer || merged.Publisher || "",
+        genres: merged.Genres || [],
+        platforms: merged.Platforms || [],
+        story: merged.About || ""
+      };
 
-    onAdded?.(minimal);
-    handleClose();
+      onAdded?.(minimal);
+      handleClose();
+    } catch (e) {
+      alert(extractApiError(e));
+      console.error("Auto commit error:", e?.response?.data ?? e);
+    }
   };
 
-  // ---------- MANUAL: commit ----------
+  // ---------- MANUAL: commit (MergedGameDto birebir, Createdat göndermiyoruz) ----------
   const doCommitManual = async () => {
     setManualError(null);
 
-    // basit kontroller
     if (!mName.trim()) {
       setManualError("Name zorunlu.");
       return;
     }
 
-    // MergedGameDto formatı (backend’ine göre key’leri senin kullandığın casing’de tuttum)
     const dto = {
       Name: mName.trim(),
-      ReleaseDate: mRelease ? new Date(mRelease).toISOString() : null, // backend DateTime? kabul ediyorsa ISO ok
+      ReleaseDate: safeIsoDateTime(mRelease),          // DateTime?
+      Metacritic: toIntOrNull(mMetacritic),
+      GgDbRating: toIntOrNull(mGgDbRating),
       MainImage: mCover || null,
+      Popularity: toIntOrNull(mPopularity),
       Developer: mDeveloper || null,
       Publisher: mPublisher || null,
-      Genres: parseCsv(mGenres),           // ["RPG","Adventure"]
-      Platforms: parseCsv(mPlatforms),     // ["PC","PS5"]
       About: mAbout || null,
-      AgeRatings: parseCsv(mAgeRatings),   // ["PEGI 18","M"]
+
+      AgeRatings: parseCsv(mAgeRatings),
+      Dlcs: parseCsv(mDlcs),
+      Tags: parseCsv(mTags),
+      Genres: parseCsv(mGenres),
+      Platforms: parseCsv(mPlatforms),
+      Images: parseCsv(mImages), // URL list
+
+      MinRequirement: mMinReqText.trim() ? { Text: mMinReqText.trim() } : null,
+      RecRequirement: mRecReqText.trim() ? { Text: mRecReqText.trim() } : null,
+
+      AudioLanguages: parseCsv(mAudioLangs),
+      Subtitles: parseCsv(mSubtitles),
+      InterfaceLanguages: parseCsv(mIfaceLangs),
+      ContentWarnings: parseCsv(mContentWarnings),
+
+      StoreLinks: parseStoreLinks(mStoreLinks),
+
       TimeToBeat: {
         Hastily: toIntOrNull(mTtbH),
         Normally: toIntOrNull(mTtbN),
         Completely: toIntOrNull(mTtbC),
       },
-      InterfaceLanguages: parseCsv(mIfaceLangs),
-      AudioLanguages: parseCsv(mAudioLangs),
-      Subtitles: parseCsv(mSubtitles),
-      Tags: parseCsv(mTags),
-      // İstersen popularity/metacritic/ggdbRating burada da ekleyebilirsin:
-      // Popularity: null, Metacritic: null, GgDbRating: null,
+
+      Engines: parseCsv(mEngines),
+      Awards: parseLines(mAwards),
+
+      Cast: parseLines(mCast),
+      Crew: parseLines(mCrew),
+
+      // Createdat YOK — backend SetOnInsert ile otomatik DateTime.UtcNow yazacak
     };
 
     try {
       setManualSaving(true);
-      const { data } = await API.post("/import/preview/one", dto);
+      const { data } = await API.post("/import/preview/one", dto, {
+        headers: { "Content-Type": "application/json" },
+      });
 
       const minimal = {
         id: data?.id ?? "temp",
@@ -232,7 +333,8 @@ export default function AddGameModal({ open, onClose, onAdded }) {
       onAdded?.(minimal);
       handleClose();
     } catch (e) {
-      setManualError(String(e?.response?.data || e?.message || e));
+      setManualError(extractApiError(e));
+      console.error("Manual commit error:", e?.response?.data ?? e);
     } finally {
       setManualSaving(false);
     }
@@ -247,11 +349,21 @@ export default function AddGameModal({ open, onClose, onAdded }) {
 
     setMName(""); setMRelease(""); setMCover("");
     setMDeveloper(""); setMPublisher("");
-    setMGenres(""); setMPlatforms(""); setMAbout("");
-    setMAgeRatings(""); setMTtbH(""); setMTtbN(""); setMTtbC("");
-    setMIfaceLangs(""); setMAudioLangs(""); setMSubtitles(""); setMTags("");
-    setManualSaving(false); setManualError(null);
 
+    setMMetacritic(""); setMGgDbRating(""); setMPopularity("");
+    setMGenres(""); setMPlatforms(""); setMAbout("");
+    setMAgeRatings(""); setMDlcs(""); setMTags("");
+    setMAudioLangs(""); setMSubtitles(""); setMIfaceLangs(""); setMContentWarnings("");
+    setMImages("");
+
+    setMMinReqText(""); setMRecReqText("");
+    setMEngines(""); setMAwards("");
+    setMCast(""); setMCrew("");
+    setMStoreLinks("");
+
+    setMTtbH(""); setMTtbN(""); setMTtbC("");
+
+    setManualSaving(false); setManualError(null);
     onClose?.();
   };
 
@@ -347,7 +459,7 @@ export default function AddGameModal({ open, onClose, onAdded }) {
           </>
         ) : (
           <>
-            {/* MANUAL FORM */}
+            {/* MANUAL FORM — DTO'daki tüm alanlar (Createdat hariç) */}
             <div className="form-grid">
               <div className="field">
                 <label>Name *</label>
@@ -355,12 +467,12 @@ export default function AddGameModal({ open, onClose, onAdded }) {
               </div>
 
               <div className="field">
-                <label>Release (YYYY-MM-DD)</label>
+                <label>Release (YYYY-MM-DD or ISO)</label>
                 <input value={mRelease} onChange={e => setMRelease(e.target.value)} placeholder="2015-05-19" />
               </div>
 
               <div className="field">
-                <label>Cover URL</label>
+                <label>Cover URL (MainImage)</label>
                 <input value={mCover} onChange={e => setMCover(e.target.value)} placeholder="https://..." />
               </div>
 
@@ -375,6 +487,21 @@ export default function AddGameModal({ open, onClose, onAdded }) {
               </div>
 
               <div className="field">
+                <label>Metacritic</label>
+                <input value={mMetacritic} onChange={e => setMMetacritic(e.target.value)} placeholder="91" />
+              </div>
+
+              <div className="field">
+                <label>GgDbRating</label>
+                <input value={mGgDbRating} onChange={e => setMGgDbRating(e.target.value)} placeholder="88" />
+              </div>
+
+              <div className="field">
+                <label>Popularity</label>
+                <input value={mPopularity} onChange={e => setMPopularity(e.target.value)} placeholder="1200" />
+              </div>
+
+              <div className="field">
                 <label>Genres (comma-separated)</label>
                 <input value={mGenres} onChange={e => setMGenres(e.target.value)} placeholder="RPG, Adventure" />
               </div>
@@ -386,7 +513,7 @@ export default function AddGameModal({ open, onClose, onAdded }) {
 
               <div className="field col-span-2">
                 <label>About / Story</label>
-                <textarea rows={4} value={mAbout} onChange={e => setMAbout(e.target.value)} placeholder="Short summary..." />
+                <textarea rows={3} value={mAbout} onChange={e => setMAbout(e.target.value)} placeholder="Short summary..." />
               </div>
 
               <div className="field">
@@ -395,12 +522,13 @@ export default function AddGameModal({ open, onClose, onAdded }) {
               </div>
 
               <div className="field">
-                <label>TimeToBeat (Hastily / Normally / Completely)</label>
-                <div className="ttb-row">
-                  <input value={mTtbH} onChange={e => setMTtbH(e.target.value)} placeholder="25" />
-                  <input value={mTtbN} onChange={e => setMTtbN(e.target.value)} placeholder="60" />
-                  <input value={mTtbC} onChange={e => setMTtbC(e.target.value)} placeholder="90" />
-                </div>
+                <label>DLCs (comma-separated)</label>
+                <input value={mDlcs} onChange={e => setMDlcs(e.target.value)} placeholder="Hearts of Stone, Blood and Wine" />
+              </div>
+
+              <div className="field">
+                <label>Tags (comma-separated)</label>
+                <input value={mTags} onChange={e => setMTags(e.target.value)} placeholder="Open World, Fantasy, Story Rich" />
               </div>
 
               <div className="field">
@@ -419,8 +547,57 @@ export default function AddGameModal({ open, onClose, onAdded }) {
               </div>
 
               <div className="field">
-                <label>Tags (comma-separated)</label>
-                <input value={mTags} onChange={e => setMTags(e.target.value)} placeholder="Open World, Fantasy, Story Rich" />
+                <label>Content Warnings (comma-separated)</label>
+                <input value={mContentWarnings} onChange={e => setMContentWarnings(e.target.value)} placeholder="Violence, Mature" />
+              </div>
+
+              <div className="field col-span-2">
+                <label>Images (comma-separated URLs)</label>
+                <input value={mImages} onChange={e => setMImages(e.target.value)} placeholder="https://img1.jpg, https://img2.jpg" />
+              </div>
+
+              <div className="field">
+                <label>MinRequirement Text</label>
+                <input value={mMinReqText} onChange={e => setMMinReqText(e.target.value)} placeholder="Minimum: ..." />
+              </div>
+
+              <div className="field">
+                <label>RecRequirement Text</label>
+                <input value={mRecReqText} onChange={e => setMRecReqText(e.target.value)} placeholder="Recommended: ..." />
+              </div>
+
+              <div className="field">
+                <label>Engines (comma-separated)</label>
+                <input value={mEngines} onChange={e => setMEngines(e.target.value)} placeholder="REDengine 3, Unreal" />
+              </div>
+
+              <div className="field">
+                <label>Awards (each line)</label>
+                <textarea rows={3} value={mAwards} onChange={e => setMAwards(e.target.value)} placeholder={"GOTY 2015\nBest RPG 2015"} />
+              </div>
+
+              <div className="field">
+                <label>Cast (each line)</label>
+                <textarea rows={3} value={mCast} onChange={e => setMCast(e.target.value)} placeholder={"Voice Actor 1\nVoice Actor 2"} />
+              </div>
+
+              <div className="field">
+                <label>Crew (each line)</label>
+                <textarea rows={3} value={mCrew} onChange={e => setMCrew(e.target.value)} placeholder={"John Doe - Director\nJane Doe - Composer"} />
+              </div>
+
+              <div className="field col-span-2">
+                <label>Store Links (one per line: Name | URL)</label>
+                <textarea rows={3} value={mStoreLinks} onChange={e => setMStoreLinks(e.target.value)} placeholder={"Steam | https://store.steampowered.com/app/...\nGOG | https://www.gog.com/game/..."} />
+              </div>
+
+              <div className="field">
+                <label>TimeToBeat (Hastily / Normally / Completely)</label>
+                <div className="ttb-row">
+                  <input value={mTtbH} onChange={e => setMTtbH(e.target.value)} placeholder="25" />
+                  <input value={mTtbN} onChange={e => setMTtbN(e.target.value)} placeholder="60" />
+                  <input value={mTtbC} onChange={e => setMTtbC(e.target.value)} placeholder="90" />
+                </div>
               </div>
             </div>
 

@@ -33,7 +33,7 @@ export default function Login() {
       localStorage.setItem("token", token);
       if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
 
-      navigate("/chat"); // girişten sonra yönlenecek sayfan
+      navigate("/"); // girişten sonra yönlenecek sayfan
     } catch (err) {
       const msg = err?.response?.data || err?.message || "Login failed.";
       setError(typeof msg === "string" ? msg : "Login failed.");
