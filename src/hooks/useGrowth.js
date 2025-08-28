@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getGrowth } from "../services/admin.api.js";
-import { addDays, fmtDay, toISODate } from "../utils/date.js";
+import { addDays, fmtDay, toISODate } from "../services/date.js";
 
 /**
  * @param {{days?:number, mode?:'daily'|'cumulative'}} opts

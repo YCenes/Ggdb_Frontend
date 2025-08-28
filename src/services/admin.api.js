@@ -1,4 +1,4 @@
-import API from "../../../../services/api.js";
+import API from "./api.js";
 
 /** @returns {Promise<{totalUsers:number,totalGames:number,windowDays:number,users:{current:number,previous:number,deltaPct:number},games:{current:number,previous:number,deltaPct:number}}>} */
 export async function getUserGameCount(params = {}) {
@@ -19,4 +19,17 @@ export async function getGrowth(params) {
     users: Number(x.users ?? x.totalUsers ?? x.u ?? 0),
     games: Number(x.games ?? x.totalGames ?? x.g ?? 0),
   }));
+
+  
+
+}
+
+export async function getGameById(id) {
+  const res = await API.get(`/admin/games/${id}`);
+  return res.data; // GameDetailDto
+}
+
+export async function updateGameById(id, dto) {
+  const res = await API.put(`/admin/games/${id}`, dto);
+  return res.data; // { message: "Game ... updated" } veya 200 ok
 }

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import Header from "../layout/admin/Header";
-import Sidebar from "../layout/admin/Sidebar";
+import Header from "./Header";
+import Sidebar from "./Sidebar";
 
 /**
  * Layout with Header + Sidebar

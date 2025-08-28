@@ -42,10 +42,10 @@ export default function CreativeStoryModal({ open, onClose, editable, data, onSa
 
           {/* Cast */}
           <div className="col">
-            <label>Cast</label>
+            <label>Crew</label>
             <TagInput
-              values={draft.cast || []}
-              setValues={(v) => setDraft({ ...draft, cast: v })}
+              values={draft.crew || []}
+              setValues={(v) => setDraft({ ...draft, crew: v })}
               placeholder="Type and press comma..."
               disabled={!editable}
             />

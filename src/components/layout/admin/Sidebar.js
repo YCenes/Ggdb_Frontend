@@ -55,7 +55,7 @@ export default function Sidebar({ open, setOpen, mobileOpen, setMobileOpen }) {
             <Item icon={Home}    label="Site Home"        to="/"                 end onClick={() => setMobileOpen(false)} />
             <Item icon={Gauge}   label="Overview"         to="/admin"            end onClick={() => setMobileOpen(false)} />
             <Item icon={Layers3} label="Section Ordering" to="/admin/sections"       onClick={() => setMobileOpen(false)} />
-            <Item icon={Gamepad2}label="Manage Games"     to="/admin/managegame"     onClick={() => setMobileOpen(false)} />
+            <Item icon={Gamepad2}label="Manage Games"     to="/admin/games"     onClick={() => setMobileOpen(false)} />
             <Item icon={Users}   label="Manage Users"     to="/admin/users"          onClick={() => setMobileOpen(false)} />
             <Item icon={BarChart3}label="Analytics"       to="/admin/analytics"      onClick={() => setMobileOpen(false)} />
             <Item icon={Settings}label="Settings"         to="/admin/settings"       onClick={() => setMobileOpen(false)} />

@@ -10,15 +10,15 @@ import Register from "./pages/Register";
 
 // Layouts
 import PublicShell from "./components/layout/PublicShell";
-import AdminShell from "./components/layout/AdminShell";
+import AdminShell from ".//components/layout/admin/AdminShell.js";
 
 // Admin pages
-import Overview from "./pages/Admin/AdminOverview/AdminOverview"; 
+import Overview from "./pages/Admin/AdminOverview.js"; 
 
 
 // NEW
 import { AuthProvider } from "./context/AuthContext.js";
-import RequireAdmin from "./components/routing/RequireAdmin.js";
+import RequireAdmin from "./router/RequireAdmin.js";
 
 import "./styles/main.scss";
 import ManageGame from "./pages/Admin/ManageGame.js";
@@ -48,8 +48,8 @@ function App() {
             }
           >
             <Route index element={<Overview />} />
-             <Route path="managegame" element={<ManageGame />} />
-             <Route path="gamedetail" element={<GameDetailAdmin />} />
+             <Route path="games" element={<ManageGame />} />
+             <Route path="game/:id" element={<GameDetailAdmin />} />
           </Route>
 
           {/* 404 */}

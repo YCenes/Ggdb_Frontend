@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import API from "../../services/api.js";
 import "../../styles/pages/admin/_manage-game.scss";
-import AddGameModal from "./AddGameModal.js";
+import AddGameModal from "./Modals/AddGameModal.js";
 
 const IconEdit = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
@@ -22,6 +23,7 @@ const IconTrash = () => (
 );
 
 export default function ManageGame() {
+  const navigate = useNavigate();
   // Filtre/arama state
   const [query, setQuery] = useState("");
   const [developer, setDeveloper] = useState("All Developers");
@@ -296,7 +298,7 @@ export default function ManageGame() {
                     <td className="td-cover">
                       {g.cover ? <img src={g.cover} alt={`${g.title} cover`} /> : <div className="no-cover">—</div>}
                     </td>
-                    <td className="td-title">{g.title}</td>
+                    <td className="td-title"><Link to={`/admin/game/${g.id}`}>{g.title}</Link></td>
                     <td className="td-release">
                       {g.release ? new Date(g.release).toISOString().slice(0, 10) : "—"}
                     </td>
@@ -304,7 +306,7 @@ export default function ManageGame() {
                     <td className="td-genres">{(g.genres || []).join(", ")}</td>
                     <td className="td-story">{g.story || "—"}</td>
                     <td className="td-actions">
-                      <button className="icon-btn" title="Edit" onClick={() => alert(`Edit ${g.title}`)}>
+                      <button className="icon-btn" title="Edit" onClick={() => navigate(`/admin/game/${g.id}`)}>
                         <IconEdit />
                       </button>
                       <button

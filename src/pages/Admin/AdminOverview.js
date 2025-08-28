@@ -1,9 +1,9 @@
 import React from "react";
-import "./styles/AdminOverview.scss";
-import { useKpis } from "./hooks/useKpis.js";
-import { useGrowth } from "./hooks/useGrowth.js";
-import LineChart from "./components/LineChart.js";
-import PieChart from "./components/PieChart.js";
+import "../../styles/admin/AdminOverview.scss";
+import { useKpis } from "../../hooks/useKpis.js";
+import { useGrowth } from "../../hooks/useGrowth.js";
+import LineChart from "../../components/charts/LineChart.js";
+import PieChart from "../../components/charts/PieChart.js";
 
 const ArrowUp = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>

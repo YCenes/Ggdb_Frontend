@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import API from "../../services/api.js";
+import API from "../../../services/api.js";
 
 /**
  * AddGameModal
