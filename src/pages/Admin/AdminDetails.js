@@ -4,6 +4,8 @@ import "../../styles/pages/admin/_game-detail-admin.scss";
 import OverviewModal from "./Modals/OverviewModal";
 import CreativeStoryModal from "./Modals/CreativeStoryModal";
 import AwardsModal from "./Modals/AwardsModal"
+import SystemModal from "./Modals/SystemModal";
+import LanguagesModal from "./Modals/LanguagesModal";
 import { getGameById, updateGameById } from "../../services/admin.api";
 
 export default function GameDetailAdmin() {
@@ -19,7 +21,9 @@ export default function GameDetailAdmin() {
 
   const [openOverview, setOpenOverview] = useState(true);
   const [openCreative, setOpenCreative] = useState(false);
-  const [openAwards, setOpenAwards] = useState(false)
+  const [openAwards, setOpenAwards] = useState(false);
+  const [openSystem, setOpenSystem] = useState(false);
+  const [openLanguages, setOpenLanguages] = useState(false)
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
@@ -83,6 +87,14 @@ export default function GameDetailAdmin() {
       cast: Array.isArray(merged.cast) ? merged.cast : [],
       awards: merged.awards ?? null,
       gameEngine: Array.isArray(merged.gameEngine) ? merged.gameEngine : [],
+
+      contentWarnings: merged.contentWarnings ?? [],
+      ageRatings: merged.ageRatings ?? [],
+      minRequirements: merged.minRequirements || null,
+      recRequirements: merged.recRequirements || null,
+      audioLanguages: Array.isArray(merged.audioLanguages) ? merged.audioLanguages : [],
+      subtitleLanguages: Array.isArray(merged.subtitleLanguages) ? merged.subtitleLanguages : [],
+      interfaceLanguages: Array.isArray(merged.interfaceLanguages) ? merged.interfaceLanguages : [],
     };
 
     try {
@@ -187,43 +199,77 @@ export default function GameDetailAdmin() {
           <button className="btn primary outline">🌐 View Game Page</button>
 
           {!isEditing ? (
-            <button
-              className="btn warning"
-              onClick={() => {
-                if (activeTab === "creative") {
-                  setOpenCreative(true);
-                  setOpenOverview(false);
-                  setOpenAwards(false);
-                }else if (activeTab === "awards") {
-        setOpenAwards(true);
-        setOpenOverview(false); setOpenCreative(false); 
-                }
-                else {
-                  setOpenOverview(true);
-                  setOpenCreative(false);
-                  setOpenAwards(false)
-                }
-                setIsEditing(true);
-              }}
-              disabled={saving}
-            >
-              ✏️ Edit {activeTab === "creative" ? "Creative & Story" : activeTab === "awards" ? "Awards" : "Overview"}
-            </button>
-          ) : (
-            <button
-              className="btn success"
-              onClick={() => {
-                const evName =  activeTab === "creative" ? "ggdb:creative-save-request"
-                  : activeTab === "awards" ? "ggdb:awards-save-request"
-                  : "ggdb:overview-save-request";
-                window.dispatchEvent(new CustomEvent(evName));
-                setIsEditing(false);
-              }}
-              disabled={saving}
-            >
-              {saving ? "⏳ Saving..." : "💾 Save"}
-            </button>
-          )}
+  <button
+    className="btn warning"
+    onClick={() => {
+      // Aktif sekmeye göre sadece ilgili modalı aç
+      switch (activeTab) {
+        case "creative":
+          setOpenCreative(true);
+          setOpenOverview(false);
+          setOpenAwards(false);
+          setOpenSystem(false);
+          setOpenLanguages(false);
+          break;
+        case "awards":
+          setOpenAwards(true);
+          setOpenOverview(false);
+          setOpenCreative(false);
+          setOpenSystem(false);
+          setOpenLanguages(false);
+          break;
+        case "system":
+          setOpenSystem(true);
+          setOpenOverview(false);
+          setOpenCreative(false);
+          setOpenAwards(false);
+          setOpenLanguages(false);
+          break;
+        case "languages":
+          setOpenLanguages(true);
+          setOpenSystem(false);
+          setOpenOverview(false);
+          setOpenCreative(false);
+          setOpenAwards(false);
+          break;
+        default: // overview
+          setOpenOverview(true);
+          setOpenCreative(false);
+          setOpenAwards(false);
+          setOpenSystem(false);
+          setOpenLanguages(false);
+          break;
+      }
+      setIsEditing(true);
+    }}
+    disabled={saving}
+  >
+    {`✏️ Edit ${
+      activeTab === "creative"   ? "Creative & Story" :
+      activeTab === "awards"     ? "Awards" :
+      activeTab === "system"     ? "System" :
+      activeTab === "languages"  ? "Languages" :
+                                   "Overview"
+    }`}
+  </button>
+) : (
+  <button
+    className="btn success"
+    onClick={() => {
+      const evName =
+        activeTab === "creative"   ? "ggdb:creative-save-request" :
+  activeTab === "awards"     ? "ggdb:awards-save-request"   :
+  activeTab === "system"     ? "ggdb:system-save-request"   :
+ activeTab === "languages"  ? "ggdb:languages-save-request" :
+  "ggdb:overview-save-request";
+      window.dispatchEvent(new CustomEvent(evName));
+      setIsEditing(false);
+    }}
+    disabled={saving}
+  >
+    {saving ? "⏳ Saving..." : "💾 Save"}
+  </button>
+)}
         </div>
       </div>
 
@@ -239,19 +285,41 @@ export default function GameDetailAdmin() {
                 setOpenOverview(true);
                 setOpenCreative(false);
                 setOpenAwards(false);
+                setOpenSystem(false);
+                setOpenLanguages(false);
               } else if (t.key === "creative") {
                 setOpenCreative(true);
                 setOpenOverview(false);
                 setOpenAwards(false);
+                setOpenSystem(false);
+                setOpenLanguages(false);
               } else if (t.key === "awards") {
                 setOpenAwards(true);
                 setOpenOverview(false);
                 setOpenCreative(false);
+                setOpenSystem(false);
+                setOpenLanguages(false);
               }
+              else if (t.key === "system") {
+  setOpenSystem(true);
+  setOpenOverview(false);
+  setOpenCreative(false);
+  setOpenAwards(false);
+  setOpenLanguages(false);
+}
+else if (t.key === "languages") {
+  setOpenLanguages(true);
+  setOpenOverview(false);
+  setOpenCreative(false);
+  setOpenAwards(false);
+  setOpenSystem(false);
+}
               else {
                 setOpenOverview(false);
                 setOpenCreative(false);
                 setOpenAwards(false);
+                setOpenSystem(false);
+                setOpenLanguages(false);
               }
               setIsEditing(false);
             }}
@@ -281,6 +349,22 @@ export default function GameDetailAdmin() {
  <AwardsModal
   open={openAwards}
   onClose={() => setOpenAwards(false)}
+  editable={isEditing}
+  data={game}
+  onSave={handlePersist}
+/>
+
+<SystemModal
+  open={openSystem}
+  onClose={() => setOpenSystem(false)}
+  editable={isEditing}
+  data={game}
+  onSave={handlePersist}
+/>
+
+<LanguagesModal
+  open={openLanguages}
+  onClose={() => setOpenLanguages(false)}
   editable={isEditing}
   data={game}
   onSave={handlePersist}
