@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../../../styles/pages/admin/_game-detail-admin.scss";
-import TagInput from "./TagInput";
 
-/** Basit bottom sheet (diğer modallarla aynı) */
+/** Basit bottom sheet */
 function BottomModal({ open, onClose, children }) {
   if (!open) return null;
   return (
@@ -15,14 +14,6 @@ function BottomModal({ open, onClose, children }) {
   );
 }
 
-/** IGDB’den import butonu placeholder */
-function IgdbImportBadge({ onClick }) {
-  return (
-    <button className="btn small" onClick={onClick} type="button">
-      IGDB Data
-    </button>
-  );
-}
 
 const COMMON_LANGS = [
   "English","Turkish","French","Italian","German","Spanish (Spain)","Portuguese (Brazil)",
@@ -30,8 +21,83 @@ const COMMON_LANGS = [
   "Chinese (Traditional)"
 ];
 
+/** Seçerek ekleyen, sade üst bar (sadece edit modunda gösteriyoruz) */
+function SelectLangAdder({ options, values, onAdd, disabled, label }) {
+  const [sel, setSel] = useState("");
+
+  const add = () => {
+    const v = (sel || "").trim();
+    if (!v) return;
+    const has = (values || []).some(x => x.toLowerCase() === v.toLowerCase());
+    if (!has) onAdd(v);
+    setSel("");
+  };
+
+  // seçilmişleri listeden düş
+  const available = options.filter(
+    o => !(values || []).some(v => v.toLowerCase() === o.toLowerCase())
+  );
+
+  return (
+    <div className="lang-adder">
+      <div className="la-left">
+        <div className="gd-label">{label}</div>
+      </div>
+      <div className="la-right">
+        <select
+          className="la-select"
+          value={sel}
+          onChange={(e) => setSel(e.target.value)}
+          disabled={disabled}
+        >
+          <option value="">— Select language —</option>
+          {available.map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+
+        <button
+          type="button"
+          className="btn primary la-add"
+          onClick={add}
+          disabled={disabled || !sel}
+          title="Add language"
+        >
+          + Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Seçilmiş dilleri gösteren chip listesi */
+function ChipList({ items, onRemove, editable }) {
+  if (!items || items.length === 0) {
+    return <div className="gd-sub" style={{ marginTop: 6 }}>No languages selected</div>;
+  }
+  return (
+    <div className="chipwrap">
+      {items.map((lang) => (
+        <span key={lang} className="chip lg">
+          {lang}
+          {editable && (
+            <button
+              type="button"
+              className="chip-x"
+              onClick={() => onRemove(lang)}
+              aria-label={`Remove ${lang}`}
+              title="Remove"
+            >
+              ×
+            </button>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function LanguagesModal({ open, onClose, editable, data, onSave }) {
-  // data içinden 3 listeyi al; yoksa boş dizi
   const [draft, setDraft] = useState({
     audioLanguages: data?.audioLanguages ?? data?.audio_language ?? data?.audio ?? [],
     subtitleLanguages: data?.subtitleLanguages ?? data?.subtitles ?? [],
@@ -57,72 +123,87 @@ export default function LanguagesModal({ open, onClose, editable, data, onSave }
     return () => window.removeEventListener("ggdb:languages-save-request", handler);
   }, [draft, onSave]);
 
-  const disabled = !editable;
+  const removeFrom = (key, val) =>
+    setDraft(s => ({ ...s, [key]: s[key].filter(x => x !== val) }));
+
+  const addTo = (key, val) =>
+    setDraft(s => ({ ...s, [key]: [...s[key], val] }));
 
   return (
     <BottomModal open={open} onClose={onClose}>
       <div className="gd-form is-insheet big" style={{ gap: 16 }}>
-        {/* Header satırı: sol başlık + import/istatistik */}
+        {/* Header */}
         <div className="grid" style={{ gridTemplateColumns: "1fr", gap: 12 }}>
-          <div className="col" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h3 style={{ margin: 0 }}>🌐 Language Support Management</h3>
-            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <div className="col header-row">
+            <h3>🌐 Language Support Management</h3>
+            <div className="header-actions">
               <span className="gd-sub">
                 {draft.audioLanguages.length + draft.subtitleLanguages.length + draft.interfaceLanguages.length} selections
               </span>
-              <IgdbImportBadge onClick={() => alert("IGDB import (placeholder)")} />
             </div>
           </div>
         </div>
 
         {/* Audio */}
         <section className="grid" style={{ gridTemplateColumns: "1fr", gap: 8 }}>
-          <div className="col">
-            <div className="gd-label">🎙️ Audio Languages</div>
-            <TagInput
-              values={draft.audioLanguages}
-              setValues={(v) => setDraft((s) => ({ ...s, audioLanguages: v }))}
-              placeholder="Select or type a language and press Enter…"
-              suggestions={COMMON_LANGS}
-              disabled={disabled}
+          <div className="col mt-2">
+            {editable && (
+              <SelectLangAdder
+                label="🎙️ Audio Languages"
+                options={COMMON_LANGS}
+                values={draft.audioLanguages}
+                onAdd={(v) => addTo("audioLanguages", v)}
+                disabled={!editable}
+              />
+            )}
+            {!editable && <div className="gd-label">🎙️ Audio Languages</div>}
+            <ChipList
+              items={draft.audioLanguages}
+              onRemove={(v) => removeFrom("audioLanguages", v)}
+              editable={editable}
             />
-            <div className="gd-sub" style={{ marginTop: 6 }}>
-              {draft.audioLanguages.length} language{draft.audioLanguages.length === 1 ? "" : "s"} selected
-            </div>
           </div>
         </section>
 
         {/* Subtitles */}
         <section className="grid" style={{ gridTemplateColumns: "1fr", gap: 8 }}>
-          <div className="col">
-            <div className="gd-label">💬 Subtitle Languages</div>
-            <TagInput
-              values={draft.subtitleLanguages}
-              setValues={(v) => setDraft((s) => ({ ...s, subtitleLanguages: v }))}
-              placeholder="Select or type a language and press Enter…"
-              suggestions={COMMON_LANGS}
-              disabled={disabled}
+          <div className="col mt-3">
+            {editable && (
+              <SelectLangAdder
+                label="💬 Subtitle Languages"
+                options={COMMON_LANGS}
+                values={draft.subtitleLanguages}
+                onAdd={(v) => addTo("subtitleLanguages", v)}
+                disabled={!editable}
+              />
+            )}
+            {!editable && <div className="gd-label">💬 Subtitle Languages</div>}
+            <ChipList
+              items={draft.subtitleLanguages}
+              onRemove={(v) => removeFrom("subtitleLanguages", v)}
+              editable={editable}
             />
-            <div className="gd-sub" style={{ marginTop: 6 }}>
-              {draft.subtitleLanguages.length} selected
-            </div>
           </div>
         </section>
 
         {/* Interface */}
         <section className="grid" style={{ gridTemplateColumns: "1fr", gap: 8 }}>
-          <div className="col">
-            <div className="gd-label">🖥️ Interface Languages</div>
-            <TagInput
-              values={draft.interfaceLanguages}
-              setValues={(v) => setDraft((s) => ({ ...s, interfaceLanguages: v }))}
-              placeholder="Select or type a language and press Enter…"
-              suggestions={COMMON_LANGS}
-              disabled={disabled}
+          <div className="col mt-3">
+            {editable && (
+              <SelectLangAdder
+                label="🖥️ Interface Languages"
+                options={COMMON_LANGS}
+                values={draft.interfaceLanguages}
+                onAdd={(v) => addTo("interfaceLanguages", v)}
+                disabled={!editable}
+              />
+            )}
+            {!editable && <div className="gd-label">🖥️ Interface Languages</div>}
+            <ChipList
+              items={draft.interfaceLanguages}
+              onRemove={(v) => removeFrom("interfaceLanguages", v)}
+              editable={editable}
             />
-            <div className="gd-sub" style={{ marginTop: 6 }}>
-              {draft.interfaceLanguages.length} selected
-            </div>
           </div>
         </section>
       </div>

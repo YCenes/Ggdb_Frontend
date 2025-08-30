@@ -1,18 +1,17 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams,useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/pages/admin/_game-detail-admin.scss";
 import OverviewModal from "./Modals/OverviewModal";
 import CreativeStoryModal from "./Modals/CreativeStoryModal";
-import AwardsModal from "./Modals/AwardsModal"
+import AwardsModal from "./Modals/AwardsModal";
 import SystemModal from "./Modals/SystemModal";
 import LanguagesModal from "./Modals/LanguagesModal";
+import StoreLinksModal from "./Modals/StoreLinksModal";
 import { getGameById, updateGameById } from "../../services/admin.api";
 
 export default function GameDetailAdmin() {
-    const navigate = useNavigate();
-
-  const params = useParams();
-  const routeId = params?.id;
+  const navigate = useNavigate();
+  const { id: routeId } = useParams();
 
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,12 +22,12 @@ export default function GameDetailAdmin() {
   const [openCreative, setOpenCreative] = useState(false);
   const [openAwards, setOpenAwards] = useState(false);
   const [openSystem, setOpenSystem] = useState(false);
-  const [openLanguages, setOpenLanguages] = useState(false)
+  const [openLanguages, setOpenLanguages] = useState(false);
+  const [openStores, setOpenStores] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // İlk yükleme: oyunu çek
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -36,18 +35,16 @@ export default function GameDetailAdmin() {
         setLoading(true);
         setError(null);
 
-        // Fallback: eğer route id yoksa bir default id kullanılabilir
         const id = routeId || "6865a8e1c32780d4b5b981cd";
         const dto = await getGameById(id);
 
-        // Progress gibi frontend-only alanları derive ediyoruz
         const viewModel = {
           ...dto,
           source: "IGDB",
           completion: 56,
           completionText: "56/100 fields completed",
-          metaScore: dto.metacriticRating,   // modal’da metaScore key’i kullanılıyor
-          ggdbRating: dto.ggdbRating,        // tutarlılık için
+          metaScore: dto.metacriticRating,
+          ggdbRating: dto.ggdbRating,
         };
 
         if (alive) setGame(viewModel);
@@ -57,66 +54,86 @@ export default function GameDetailAdmin() {
         if (alive) setLoading(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [routeId]);
 
-  // Tek bir persist noktası: her iki modal da bunu çağıracak
-  const handlePersist = useCallback(async (partialDraft) => {
-    if (!game) return;
-    const id = routeId || game.id;
-    const merged = { ...game, ...partialDraft };
+  const handlePersist = useCallback(
+    async (partialDraft) => {
+      if (!game) return;
+      const id = routeId || game.id;
+      const merged = { ...game, ...partialDraft };
 
-    // DTO’ya normalize (backend’in beklediği isimler)
-    const dto = {
-      id,
-      title: merged.title,
-      releaseDate: merged.releaseDate,
-      studio: merged.studio || null,
-      ggdbRating: Number.isFinite(+merged.ggdbRating) ? +merged.ggdbRating : merged.ggdbRating ?? null,
-      metacriticRating: Number.isFinite(+merged.metaScore) ? +merged.metaScore : merged.metaScore ?? null,
-      cover: merged.cover || null,
-      video: merged.video || null,
+      const dto = {
+        id,
+        title: merged.title,
+        releaseDate: merged.releaseDate,
+        studio: merged.studio || null,
+        ggdbRating: Number.isFinite(+merged.ggdbRating) ? +merged.ggdbRating : merged.ggdbRating ?? null,
+        metacriticRating: Number.isFinite(+merged.metaScore) ? +merged.metaScore : merged.metaScore ?? null,
+        cover: merged.cover || null,
+        video: merged.video || null,
 
-      developer: merged.developer || null,
-      publisher: merged.publisher || null,
-      genres: Array.isArray(merged.genres) ? merged.genres : [],
-      platforms: Array.isArray(merged.platforms) ? merged.platforms : [],
-      story: merged.story || null,
-      tags: Array.isArray(merged.tags) ? merged.tags : [],
-      dlcs: Array.isArray(merged.dlcs) ? merged.dlcs : [],
-      cast: Array.isArray(merged.cast) ? merged.cast : [],
-      awards: merged.awards ?? null,
-      gameEngine: Array.isArray(merged.gameEngine) ? merged.gameEngine : [],
+        developer: merged.developer || null,
+        publisher: merged.publisher || null,
+        genres: Array.isArray(merged.genres) ? merged.genres : [],
+        platforms: Array.isArray(merged.platforms) ? merged.platforms : [],
+        story: merged.story || null,
+        tags: Array.isArray(merged.tags) ? merged.tags : [],
+        dlcs: Array.isArray(merged.dlcs) ? merged.dlcs : [],
+        cast: Array.isArray(merged.cast) ? merged.cast : [],
+        awards: merged.awards ?? null,
+        gameEngine: Array.isArray(merged.gameEngine) ? merged.gameEngine : [],
 
-      contentWarnings: merged.contentWarnings ?? [],
-      ageRatings: merged.ageRatings ?? [],
-      minRequirements: merged.minRequirements || null,
-      recRequirements: merged.recRequirements || null,
-      audioLanguages: Array.isArray(merged.audioLanguages) ? merged.audioLanguages : [],
-      subtitleLanguages: Array.isArray(merged.subtitleLanguages) ? merged.subtitleLanguages : [],
-      interfaceLanguages: Array.isArray(merged.interfaceLanguages) ? merged.interfaceLanguages : [],
-    };
+        contentWarnings: merged.contentWarnings ?? [],
+        ageRatings: merged.ageRatings ?? [],
+        minRequirements: merged.minRequirements || null,
+        recRequirements: merged.recRequirements || null,
 
-    try {
-      setSaving(true);
-      setError(null);
-      await updateGameById(id, dto);
-      setGame(merged);         // optimistic update
-      setIsEditing(false);
-    } catch (err) {
-      setError(err?.response?.data?.message || err?.message || "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  }, [game, routeId]);
+        audioLanguages: Array.isArray(merged.audioLanguages) ? merged.audioLanguages : [],
+        subtitleLanguages: Array.isArray(merged.subtitleLanguages) ? merged.subtitleLanguages : [],
+        interfaceLanguages: Array.isArray(merged.interfaceLanguages) ? merged.interfaceLanguages : [],
 
-  // UI durumları
+        // NEW: Store Links (StoreName ile)
+       
+    storeLinks: Array.isArray(merged.storeLinks)
+      ? merged.storeLinks.map((s) => ({
+          id:         s.id ?? s.Id ?? s.storeId ?? null,
+          storeName:  s.storeName ?? s.StoreName ?? s.store ?? null,
+          slug:       s.slug ?? s.Slug ?? s.slugdto ?? null,
+          domain:     s.domain ?? s.Domain ?? s.domaindto ?? null,
+          url:        s.url ?? s.Url ?? s.urldto ?? "",
+          externalId: s.externalId ?? s.ExternalId ?? s.externalIddto ?? null,
+    }))
+  : [],
+      };
+
+      try {
+        setSaving(true);
+        setError(null);
+        await updateGameById(id, dto);
+        setGame(merged); // optimistic
+        setIsEditing(false);
+      } catch (err) {
+        setError(err?.response?.data?.message || err?.message || "Save failed");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [game, routeId]
+  );
+
   if (loading) {
     return (
       <div className="gd-page">
         <div className="gd-hero skeleton" />
-        <div className="gd-strip"><div className="skeleton bar" /></div>
-        <div className="gd-title-row"><div className="skeleton chip" /></div>
+        <div className="gd-strip">
+          <div className="skeleton bar" />
+        </div>
+        <div className="gd-title-row">
+          <div className="skeleton chip" />
+        </div>
       </div>
     );
   }
@@ -146,16 +163,12 @@ export default function GameDetailAdmin() {
   return (
     <div className="gd-page">
       {/* HERO */}
-     <div className="gd-hero">
-  <div
-    className="gd-hero-bg"
-    style={{ backgroundImage: `url(${game.cover})` }}
-    aria-hidden
-  />
-  <div className="gd-hero-fore">
-    <img src={game.cover} alt="Cover" />
-  </div>
-</div>
+      <div className="gd-hero">
+        <div className="gd-hero-bg" style={{ backgroundImage: `url(${game.cover})` }} aria-hidden />
+        <div className="gd-hero-fore">
+          <img src={game.cover} alt="Cover" />
+        </div>
+      </div>
 
       {/* INFO STRIP */}
       <div className="gd-strip">
@@ -195,81 +208,107 @@ export default function GameDetailAdmin() {
           <h1>{game.title}</h1>
         </div>
         <div className="right">
-          <button className="btn ghost" onClick={() => navigate(`/admin/games`)} >← Back</button>
+          <button className="btn ghost" onClick={() => navigate(`/admin/games`)}>
+            ← Back
+          </button>
           <button className="btn primary outline">🌐 View Game Page</button>
 
           {!isEditing ? (
-  <button
-    className="btn warning"
-    onClick={() => {
-      // Aktif sekmeye göre sadece ilgili modalı aç
-      switch (activeTab) {
-        case "creative":
-          setOpenCreative(true);
-          setOpenOverview(false);
-          setOpenAwards(false);
-          setOpenSystem(false);
-          setOpenLanguages(false);
-          break;
-        case "awards":
-          setOpenAwards(true);
-          setOpenOverview(false);
-          setOpenCreative(false);
-          setOpenSystem(false);
-          setOpenLanguages(false);
-          break;
-        case "system":
-          setOpenSystem(true);
-          setOpenOverview(false);
-          setOpenCreative(false);
-          setOpenAwards(false);
-          setOpenLanguages(false);
-          break;
-        case "languages":
-          setOpenLanguages(true);
-          setOpenSystem(false);
-          setOpenOverview(false);
-          setOpenCreative(false);
-          setOpenAwards(false);
-          break;
-        default: // overview
-          setOpenOverview(true);
-          setOpenCreative(false);
-          setOpenAwards(false);
-          setOpenSystem(false);
-          setOpenLanguages(false);
-          break;
-      }
-      setIsEditing(true);
-    }}
-    disabled={saving}
-  >
-    {`✏️ Edit ${
-      activeTab === "creative"   ? "Creative & Story" :
-      activeTab === "awards"     ? "Awards" :
-      activeTab === "system"     ? "System" :
-      activeTab === "languages"  ? "Languages" :
-                                   "Overview"
-    }`}
-  </button>
-) : (
-  <button
-    className="btn success"
-    onClick={() => {
-      const evName =
-        activeTab === "creative"   ? "ggdb:creative-save-request" :
-  activeTab === "awards"     ? "ggdb:awards-save-request"   :
-  activeTab === "system"     ? "ggdb:system-save-request"   :
- activeTab === "languages"  ? "ggdb:languages-save-request" :
-  "ggdb:overview-save-request";
-      window.dispatchEvent(new CustomEvent(evName));
-      setIsEditing(false);
-    }}
-    disabled={saving}
-  >
-    {saving ? "⏳ Saving..." : "💾 Save"}
-  </button>
-)}
+            <button
+              className="btn warning"
+              onClick={() => {
+                switch (activeTab) {
+                  case "creative":
+                    setOpenCreative(true);
+                    setOpenOverview(false);
+                    setOpenAwards(false);
+                    setOpenSystem(false);
+                    setOpenLanguages(false);
+                    setOpenStores(false);
+                    break;
+                  case "awards":
+                    setOpenAwards(true);
+                    setOpenOverview(false);
+                    setOpenCreative(false);
+                    setOpenSystem(false);
+                    setOpenLanguages(false);
+                    setOpenStores(false);
+                    break;
+                  case "system":
+                    setOpenSystem(true);
+                    setOpenOverview(false);
+                    setOpenCreative(false);
+                    setOpenAwards(false);
+                    setOpenLanguages(false);
+                    setOpenStores(false);
+                    break;
+                  case "languages":
+                    setOpenLanguages(true);
+                    setOpenSystem(false);
+                    setOpenOverview(false);
+                    setOpenCreative(false);
+                    setOpenAwards(false);
+                    setOpenStores(false);
+                    break;
+                  case "stores":
+                    setOpenStores(true);
+                    setOpenOverview(false);
+                    setOpenCreative(false);
+                    setOpenAwards(false);
+                    setOpenSystem(false);
+                    setOpenLanguages(false);
+                    break;
+                  default:
+                    setOpenOverview(true);
+                    setOpenCreative(false);
+                    setOpenAwards(false);
+                    setOpenSystem(false);
+                    setOpenLanguages(false);
+                    setOpenStores(false);
+                    break;
+                }
+                setIsEditing(true);
+              }}
+              disabled={saving}
+            >
+              {`✏️ Edit ${
+                activeTab === "creative"
+                  ? "Creative & Story"
+                  : activeTab === "awards"
+                  ? "Awards"
+                  : activeTab === "system"
+                  ? "System"
+                  : activeTab === "languages"
+                  ? "Languages"
+                  : activeTab === "stores"
+                  ? "Store Links"
+                  : "Overview"
+              }`}
+            </button>
+          ) : (
+            <button
+              className="btn success"
+              onClick={() => {
+                const evName =
+                  activeTab === "creative"
+                    ? "ggdb:creative-save-request"
+                    : activeTab === "awards"
+                    ? "ggdb:awards-save-request"
+                    : activeTab === "system"
+                    ? "ggdb:system-save-request"
+                    : activeTab === "languages"
+                    ? "ggdb:languages-save-request"
+                    : activeTab === "stores"
+                    ? "ggdb:stores-save-request"
+                    : "ggdb:overview-save-request";
+                window.dispatchEvent(new CustomEvent(evName));
+                setIsEditing(false);
+              }}
+              disabled={saving}
+            >
+              {saving ? "⏳ Saving..." : "💾 Save"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -287,39 +326,49 @@ export default function GameDetailAdmin() {
                 setOpenAwards(false);
                 setOpenSystem(false);
                 setOpenLanguages(false);
+                setOpenStores(false);
               } else if (t.key === "creative") {
                 setOpenCreative(true);
                 setOpenOverview(false);
                 setOpenAwards(false);
                 setOpenSystem(false);
                 setOpenLanguages(false);
+                setOpenStores(false);
               } else if (t.key === "awards") {
                 setOpenAwards(true);
                 setOpenOverview(false);
                 setOpenCreative(false);
                 setOpenSystem(false);
                 setOpenLanguages(false);
-              }
-              else if (t.key === "system") {
-  setOpenSystem(true);
-  setOpenOverview(false);
-  setOpenCreative(false);
-  setOpenAwards(false);
-  setOpenLanguages(false);
-}
-else if (t.key === "languages") {
-  setOpenLanguages(true);
-  setOpenOverview(false);
-  setOpenCreative(false);
-  setOpenAwards(false);
-  setOpenSystem(false);
-}
-              else {
+                setOpenStores(false);
+              } else if (t.key === "system") {
+                setOpenSystem(true);
+                setOpenOverview(false);
+                setOpenCreative(false);
+                setOpenAwards(false);
+                setOpenLanguages(false);
+                setOpenStores(false);
+              } else if (t.key === "languages") {
+                setOpenLanguages(true);
+                setOpenOverview(false);
+                setOpenCreative(false);
+                setOpenAwards(false);
+                setOpenSystem(false);
+                setOpenStores(false);
+              } else if (t.key === "stores") {
+                setOpenStores(true);
                 setOpenOverview(false);
                 setOpenCreative(false);
                 setOpenAwards(false);
                 setOpenSystem(false);
                 setOpenLanguages(false);
+              } else {
+                setOpenOverview(false);
+                setOpenCreative(false);
+                setOpenAwards(false);
+                setOpenSystem(false);
+                setOpenLanguages(false);
+                setOpenStores(false);
               }
               setIsEditing(false);
             }}
@@ -330,45 +379,12 @@ else if (t.key === "languages") {
       </div>
 
       {/* MODALS */}
-      <OverviewModal
-        open={openOverview}
-        onClose={() => setOpenOverview(false)}
-        editable={isEditing}
-        data={game}
-        onSave={handlePersist}       // tek yerden persist
-      />
-
-      <CreativeStoryModal
-        open={openCreative}
-        onClose={() => setOpenCreative(false)}
-        editable={isEditing}
-        data={game}
-        onSave={handlePersist}       // tek yerden persist
-      />
-
- <AwardsModal
-  open={openAwards}
-  onClose={() => setOpenAwards(false)}
-  editable={isEditing}
-  data={game}
-  onSave={handlePersist}
-/>
-
-<SystemModal
-  open={openSystem}
-  onClose={() => setOpenSystem(false)}
-  editable={isEditing}
-  data={game}
-  onSave={handlePersist}
-/>
-
-<LanguagesModal
-  open={openLanguages}
-  onClose={() => setOpenLanguages(false)}
-  editable={isEditing}
-  data={game}
-  onSave={handlePersist}
-/>
+      <OverviewModal open={openOverview} onClose={() => setOpenOverview(false)} editable={isEditing} data={game} onSave={handlePersist} />
+      <CreativeStoryModal open={openCreative} onClose={() => setOpenCreative(false)} editable={isEditing} data={game} onSave={handlePersist} />
+      <AwardsModal open={openAwards} onClose={() => setOpenAwards(false)} editable={isEditing} data={game} onSave={handlePersist} />
+      <SystemModal open={openSystem} onClose={() => setOpenSystem(false)} editable={isEditing} data={game} onSave={handlePersist} />
+      <LanguagesModal open={openLanguages} onClose={() => setOpenLanguages(false)} editable={isEditing} data={game} onSave={handlePersist} />
+      <StoreLinksModal open={openStores} onClose={() => setOpenStores(false)} editable={isEditing} data={game} onSave={handlePersist} />
     </div>
   );
 }
