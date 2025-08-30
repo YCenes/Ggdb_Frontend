@@ -65,6 +65,10 @@ export default function AddGameModal({ open, onClose, onAdded }) {
   // StoreLinks: her satır "Name | URL"
   const [mStoreLinks, setMStoreLinks] = useState("");
 
+  const [mScreenshots, setMScreenshots] = useState("");
+  const [mTrailers, setMTrailers] = useState("");
+
+
   const [manualSaving, setManualSaving] = useState(false);
   const [manualError, setManualError] = useState(null);
 
@@ -166,6 +170,29 @@ export default function AddGameModal({ open, onClose, onAdded }) {
     if (err?.message) return err.message;
     try { return JSON.stringify(d ?? err); } catch { return "Unknown error"; }
   };
+
+  const extractYouTubeId = (url) => {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
+    if (u.hostname === "youtu.be") return u.pathname.slice(1) || null;
+    return null;
+  } catch { return null; }
+};
+
+const parseTrailersLines = (s) =>
+  (s || "")
+    .split(/\r?\n/)
+    .map(x => x.trim())
+    .filter(Boolean)
+    .map(url => {
+      const ytId = extractYouTubeId(url);
+      return {
+        Platform: ytId ? "youtube" : "generic",
+        Url: url,
+        YouTubeId: ytId
+      };
+    });
 
   // ---------- AUTO: search (STRICT) ----------
   const runSearch = async () => {
@@ -310,6 +337,9 @@ export default function AddGameModal({ open, onClose, onAdded }) {
       Cast: parseLines(mCast),
       Crew: parseLines(mCrew),
 
+      Screenshots: parseCsv(mScreenshots),
+      Trailers: parseTrailersLines(mTrailers)
+
       // Createdat YOK — backend SetOnInsert ile otomatik DateTime.UtcNow yazacak
     };
 
@@ -349,6 +379,8 @@ export default function AddGameModal({ open, onClose, onAdded }) {
 
     setMName(""); setMRelease(""); setMCover("");
     setMDeveloper(""); setMPublisher("");
+    setMScreenshots("");
+    setMTrailers("");
 
     setMMetacritic(""); setMGgDbRating(""); setMPopularity("");
     setMGenres(""); setMPlatforms(""); setMAbout("");
@@ -441,18 +473,30 @@ export default function AddGameModal({ open, onClose, onAdded }) {
             {merged && (
               <div className="merge-preview">
                 <div className="mp-left">
-                  {merged.MainImage
-                    ? <img src={merged.MainImage} alt="cover" />
+                  {merged.mainImage
+                    ? <img src={merged.mainImage} alt="cover" />
                     : <div className="no-cover">No Cover</div>}
                 </div>
                 <div className="mp-right">
-                  <div className="mp-title">{merged.Name}</div>
-                  <div className="mp-row"><b>Release:</b> {merged.ReleaseDate ? new Date(merged.ReleaseDate).toISOString().slice(0,10) : "—"}</div>
-                  <div className="mp-row"><b>Developer:</b> {merged.Developer || "—"}</div>
-                  <div className="mp-row"><b>Publisher:</b> {merged.Publisher || "—"}</div>
-                  <div className="mp-row"><b>Genres:</b> {(merged.Genres || []).join(", ") || "—"}</div>
-                  <div className="mp-row"><b>Platforms:</b> {(merged.Platforms || []).join(", ") || "—"}</div>
-                  <div className="mp-row"><b>About:</b> {merged.About || "—"}</div>
+                  <div className="mp-title">{merged.name}</div>
+                  <div className="mp-row"><b>Release:</b> {merged.releaseDate ? new Date(merged.releaseDate).toISOString().slice(0,10) : "—"}</div>
+                  <div className="mp-row"><b>Developer:</b> {merged.developer || "—"}</div>
+                  <div className="mp-row"><b>Publisher:</b> {merged.publisher || "—"}</div>
+                  <div className="mp-row"><b>Genres:</b> {(merged.genres || []).join(", ") || "—"}</div>
+                  <div className="mp-row"><b>Platforms:</b> {(merged.platforms || []).join(", ") || "—"}</div>
+                  <div className="mp-row"><b>About:</b> {merged.about || "—"}</div>
+                  {/* --- Screenshots preview --- */}
+{Array.isArray(merged.screenshots) && merged.screenshots.length > 0 && (
+  <>
+    <div className="mp-subtitle">Screenshots</div>
+    <div className="ss-grid">
+      {merged.screenshots.slice(0, 8).map((u, i) => (
+        <img key={i} src={u} alt={`ss-${i}`} className="ss-img" />
+      ))}
+    </div>
+  </>
+)}
+
                 </div>
               </div>
             )}
@@ -585,6 +629,25 @@ export default function AddGameModal({ open, onClose, onAdded }) {
                 <label>Crew (each line)</label>
                 <textarea rows={3} value={mCrew} onChange={e => setMCrew(e.target.value)} placeholder={"John Doe - Director\nJane Doe - Composer"} />
               </div>
+              <div className="field col-span-2">
+              <label>Screenshots (comma-separated URLs)</label>
+              <input
+                value={mScreenshots}
+                onChange={e => setMScreenshots(e.target.value)}
+                placeholder="https://img1.jpg, https://img2.png"
+              />
+            </div>
+
+            <div className="field col-span-2">
+              <label>Trailers (each line: full URL)</label>
+              <textarea
+                rows={3}
+                value={mTrailers}
+                onChange={e => setMTrailers(e.target.value)}
+                placeholder={"https://youtu.be/VIDEOID\nhttps://www.youtube.com/watch?v=VIDEOID"}
+              />
+            </div>
+
 
               <div className="field col-span-2">
                 <label>Store Links (one per line: Name | URL)</label>

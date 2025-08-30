@@ -95,7 +95,7 @@ export default function GameDetailAdmin() {
         subtitleLanguages: Array.isArray(merged.subtitleLanguages) ? merged.subtitleLanguages : [],
         interfaceLanguages: Array.isArray(merged.interfaceLanguages) ? merged.interfaceLanguages : [],
 
-        // NEW: Store Links (StoreName ile)
+        soundtrack: Array.isArray(merged.soundtrack) ? merged.soundtrack : [],
        
         storeLinks: Array.isArray(merged.storeLinks) ? merged.storeLinks : [],
       };
@@ -141,9 +141,9 @@ export default function GameDetailAdmin() {
     { key: "overview", label: "Overview", open: () => setOpenOverview(true) },
     { key: "creative", label: "Creative & Story", open: () => setOpenCreative(true) },
     { key: "awards", label: "Awards", open: () => setOpenAwards(true) },
-    { key: "system", label: "System" },
-    { key: "languages", label: "Languages" },
-    { key: "stores", label: "Store Links" },
+    { key: "system", label: "System", open: () => setOpenAwards(true)  },
+    { key: "languages", label: "Languages", open: () => setOpenLanguages(true)  },
+    { key: "stores", label: "Store Links", open: () => setOpenStores(true)  },
     { key: "media", label: "Media" },
     { key: "credits", label: "Credits" },
     { key: "review", label: "Review" },

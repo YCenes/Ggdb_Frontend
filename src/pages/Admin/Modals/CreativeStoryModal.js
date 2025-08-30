@@ -40,7 +40,7 @@ export default function CreativeStoryModal({ open, onClose, editable, data, onSa
             />
           </div>
 
-          {/* Cast */}
+          {/* Crew */}
           <div className="col">
             <label>Crew</label>
             <TagInput
@@ -58,6 +58,17 @@ export default function CreativeStoryModal({ open, onClose, editable, data, onSa
               values={draft.dlcs || []}
               setValues={(v) => setDraft({ ...draft, dlcs: v })}
               placeholder="Type and press comma..."
+              disabled={!editable}
+            />
+          </div>
+
+          {/* Soundtrack — YENİ */}
+          <div className="col">
+            <label>Soundtrack</label>
+            <TagInput
+              values={draft.soundtrack || []}
+              setValues={(v) => setDraft({ ...draft, soundtrack: v })}
+              placeholder="Add a track or composer (press comma)..."
               disabled={!editable}
             />
           </div>
