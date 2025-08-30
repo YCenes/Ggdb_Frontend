@@ -15,18 +15,23 @@ function BottomModal({ open, onClose, children }) {
 }
 
 export default function StoreLinksModal({ open, onClose, editable, data, onSave }) {
-  const [draft, setDraft] = useState({
-    storeLinks: Array.isArray(data?.storeLinks) ? data.storeLinks : [],
-  });
+  const [draft, setDraft] = useState({ storeLinks: [] });
 
-  // modal açıldığında / data değiştiğinde yenile
+  // modal açıldığında / data değiştiğinde normalize et
   useEffect(() => {
-    setDraft({
-      storeLinks: Array.isArray(data?.storeLinks) ? data.storeLinks : [],
-    });
+    const src = Array.isArray(data?.storeLinks) ? data.storeLinks : [];
+    const normalized = src.map(x => ({
+      // Backend'ten gelebilecek farklı casing'leri tek tipe indiriyoruz
+      store:  x.store  ?? x.Store  ?? "",
+      domain: x.domain ?? x.Domain ?? "",
+      url:    x.url    ?? x.Url    ?? "",
+      // Diğer alanlar varsa koru (id, slug, externalId vs)
+      ...x,
+    }));
+    setDraft({ storeLinks: normalized });
   }, [data, open]);
 
-  // Parent Save tetiklenince yakala
+  // Parent Save tetiklenince yakala — normalize edilmiş objeleri olduğu gibi gönderiyoruz
   useEffect(() => {
     const handler = () => onSave({ storeLinks: draft.storeLinks });
     window.addEventListener("ggdb:stores-save-request", handler);
@@ -38,8 +43,12 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
   const updateLink = (idx, patch) => {
     setDraft((s) => {
       const next = s.storeLinks.slice();
-      // Diğer alanlar varsa koru, sadece store/url güncelle
-      next[idx] = { ...next[idx], ...patch };
+      const merged = { ...next[idx], ...patch };
+      // ufak trim
+      if ('store'  in patch) merged.store  = (merged.store  || "").trim();
+      if ('domain' in patch) merged.domain = (merged.domain || "").trim();
+      if ('url'    in patch) merged.url    = (merged.url    || "").trim();
+      next[idx] = merged;
       return { ...s, storeLinks: next };
     });
   };
@@ -47,7 +56,7 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
   const addLink = () => {
     setDraft((s) => ({
       ...s,
-      storeLinks: [...s.storeLinks, { store: "", url: "" }],
+      storeLinks: [...s.storeLinks, { store: "", domain: "", url: "" }],
     }));
   };
 
@@ -90,7 +99,7 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
                 borderRadius: 12,
                 padding: 12,
                 display: "grid",
-                gridTemplateColumns: "1fr 2fr auto",
+                gridTemplateColumns: "1fr 1.2fr 1.8fr auto",
                 gap: 8,
                 alignItems: "center",
               }}
@@ -103,6 +112,18 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
                   placeholder="e.g., Steam / Epic Games / GOG"
                   value={row.store ?? ""}
                   onChange={(e) => updateLink(i, { store: e.target.value })}
+                  disabled={disabled}
+                />
+              </div>
+
+              {/* DOMAIN */}
+              <div>
+                <label className="gd-label">Domain</label>
+                <input
+                  type="text"
+                  placeholder="store.steampowered.com"
+                  value={row.domain ?? ""}
+                  onChange={(e) => updateLink(i, { domain: e.target.value })}
                   disabled={disabled}
                 />
               </div>

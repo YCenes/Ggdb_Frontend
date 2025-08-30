@@ -97,16 +97,7 @@ export default function GameDetailAdmin() {
 
         // NEW: Store Links (StoreName ile)
        
-    storeLinks: Array.isArray(merged.storeLinks)
-      ? merged.storeLinks.map((s) => ({
-          id:         s.id ?? s.Id ?? s.storeId ?? null,
-          storeName:  s.storeName ?? s.StoreName ?? s.store ?? null,
-          slug:       s.slug ?? s.Slug ?? s.slugdto ?? null,
-          domain:     s.domain ?? s.Domain ?? s.domaindto ?? null,
-          url:        s.url ?? s.Url ?? s.urldto ?? "",
-          externalId: s.externalId ?? s.ExternalId ?? s.externalIddto ?? null,
-    }))
-  : [],
+        storeLinks: Array.isArray(merged.storeLinks) ? merged.storeLinks : [],
       };
 
       try {
