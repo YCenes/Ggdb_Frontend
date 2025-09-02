@@ -10,6 +10,70 @@ import StoreLinksModal from "./Modals/StoreLinksModal";
 import MediaModal from "./Modals/MediaModal";
 import { getGameById, updateGameById } from "../../services/admin.api";
 
+function normalizeGallery(dto) {
+  const g =
+    dto?.gallery ??
+    dto?.Gallery ??
+    {}; // hiç yoksa boş
+
+  // Olası image alan adları
+  const imgArrRaw =
+    g?.images ?? g?.Images ?? g?.image ?? g?.Image ?? [];
+
+  // Olası video alan adları
+  const vidArrRaw =
+    g?.videos ?? g?.Videos ?? g?.video ?? g?.Video ?? [];
+
+  const images = Array.isArray(imgArrRaw)
+    ? imgArrRaw
+        .filter(Boolean)
+        .map((x, i) => ({
+          url: x.url ?? x.URL ?? "",
+          title: x.title ?? x.Title ?? `Screenshot ${i + 1}`,
+          metaDatas: x.metaDatas ?? x.MetaDatas ?? [],
+        }))
+        .filter((x) => x.url)
+    : [];
+
+  const videos = Array.isArray(vidArrRaw)
+    ? vidArrRaw
+        .filter(Boolean)
+        .map((x, i) => ({
+          url: x.url ?? x.URL ?? "",
+          title: x.title ?? x.Title ?? `Trailer ${i + 1}`,
+          youTubeId: x.youTubeId ?? x.YouTubeId ?? null,
+          metaDatas: x.metaDatas ?? x.MetaDatas ?? [],
+        }))
+        .filter((x) => x.url || x.youTubeId)
+    : [];
+
+  // Bazı API’ler images/videos’ı direkt köke koyabilir; ekstra fallback:
+  const imagesTop = Array.isArray(dto?.images ?? dto?.Images)
+    ? (dto.images ?? dto.Images).map((x, i) => ({
+        url: x.url ?? x.URL ?? "",
+        title: x.title ?? x.Title ?? `Screenshot ${i + 1}`,
+        metaDatas: x.metaDatas ?? x.MetaDatas ?? [],
+      })).filter(x => x.url)
+    : [];
+
+  const videosTop = Array.isArray(dto?.videos ?? dto?.Videos)
+    ? (dto.videos ?? dto.Videos).map((x, i) => ({
+        url: x.url ?? x.URL ?? "",
+        title: x.title ?? x.Title ?? `Trailer ${i + 1}`,
+        youTubeId: x.youTubeId ?? x.YouTubeId ?? null,
+        metaDatas: x.metaDatas ?? x.MetaDatas ?? [],
+      })).filter(x => x.url || x.youTubeId)
+    : [];
+
+  return {
+    images: images.length ? images : imagesTop,
+    videos: videos.length ? videos : videosTop,
+  };
+}
+
+
+
+
 export default function GameDetailAdmin() {
   const navigate = useNavigate();
   const { id: routeId } = useParams();
@@ -29,37 +93,52 @@ export default function GameDetailAdmin() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+ 
+
+ 
+
+  
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  let alive = true;
+  (async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const id = routeId || "6865a8e1c32780d4b5b981cd";
-        const dto = await getGameById(id);
+      const id = routeId || "6865a8e1c32780d4b5b981cd";
+      const dto = await getGameById(id);
+      console.log("[ADMIN] raw dto:", dto);
+      console.log("[ADMIN] dto.gallery:", dto?.gallery ?? dto?.Gallery);
 
-        const viewModel = {
-          ...dto,
-          source: "IGDB",
-          completion: 56,
-          completionText: "56/100 fields completed",
-          metaScore: dto.metacriticRating,
-          ggdbRating: dto.ggdbRating,
-        };
+      // >>> BURADA dto hazır, normalize edebiliriz
+      const { images, videos } = normalizeGallery(dto);
 
-        if (alive) setGame(viewModel);
-      } catch (err) {
-        if (alive) setError(err?.response?.data?.message || err?.message || "Load failed");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [routeId]);
+      console.log("[ADMIN] normalized images/videos:", { images, videos, ilen: images.length, vlen: videos.length });
+
+      const viewModel = {
+        ...dto,
+        source: "IGDB",
+        completion: 56,
+        completionText: "56/100 fields completed",
+        metaScore: dto.metacriticRating,
+        ggdbRating: dto.ggdbRating,
+        images,
+        videos,
+      };
+
+      if (alive) setGame(viewModel);
+    } catch (err) {
+      if (alive) setError(err?.response?.data?.message || err?.message || "Load failed");
+    } finally {
+      if (alive) setLoading(false);
+    }
+  })();
+  return () => {
+    alive = false;
+  };
+}, [routeId]);
+
 
   const handlePersist = useCallback(
     async (partialDraft) => {
@@ -100,6 +179,9 @@ export default function GameDetailAdmin() {
         soundtrack: Array.isArray(merged.soundtrack) ? merged.soundtrack : [],
 
         storeLinks: Array.isArray(merged.storeLinks) ? merged.storeLinks : [],
+
+        images: Array.isArray(merged.images) ? merged.images : [],
+        videos: Array.isArray(merged.videos) ? merged.videos : [],
       };
 
       try {
@@ -116,6 +198,8 @@ export default function GameDetailAdmin() {
     },
     [game, routeId]
   );
+
+  
 
   if (loading) {
     return (
@@ -138,6 +222,8 @@ export default function GameDetailAdmin() {
     );
   }
   if (!game) return null;
+
+  
 
   const tabs = [
     { key: "overview", label: "Overview", open: () => setOpenOverview(true) },
