@@ -1,0 +1,55 @@
+/* Modal içi genişlik ortalama; istersen değerle oynayabilirsin */
+.gd-form.big { max-width: 1240px; margin: 0 auto; }
+
+/* 3 sabit kolon — kartlar büyümez, eksik kalırsa boşluk görünür */
+.media-grid.three-fixed {
+  display: grid;
+  grid-template-columns: repeat(3, 360px); /* her kolon sabit 360px */
+  column-gap: 24px;
+  row-gap: 24px;
+  justify-content: space-between; /* üç kartı satırda güzel dağıtır */
+}
+
+/* Kart sabit genişlik ve görünüm */
+.media-card {
+  width: 360px;                 /* sabit */
+  background: #0b0f16;
+  border-radius: 16px;
+  padding: 16px;
+  color: #e5e7eb;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+/* Görsel alanı */
+.media-preview { position: relative; }
+.media-preview .media-img {
+  width: 100%;
+  aspect-ratio: 16/9;           /* yükseklik tutarlı */
+  object-fit: cover;
+  border-radius: 12px;
+}
+.media-preview .tag {
+  position: absolute; top: 10px; right: 10px;
+  padding: 4px 10px; font-size: 12px; font-weight: 700;
+  border-radius: 999px; color: #fff; background: #7c3aed;
+}
+
+/* Input/Select stilleri (seninkilerle uyumlu) */
+.media-fields { margin-top: 14px; }
+.media-fields label {
+  display: block; margin: 10px 0 6px;
+  font-size: 13px; font-weight: 700; color: #7dd3fc;
+}
+.media-fields input, .media-fields select {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  background: #0f1722; border: 1px solid #1f2937; color: #e5e7eb;
+}
+.meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Responsive: tablet/telefon için istersen aşağıyı aç */
+@media (max-width: 1180px) {
+  .media-grid.three-fixed { grid-template-columns: repeat(2, 360px); }
+}
+@media (max-width: 780px) {
+  .media-grid.three-fixed { grid-template-columns: repeat(1, 360px); justify-content: center; }
+}

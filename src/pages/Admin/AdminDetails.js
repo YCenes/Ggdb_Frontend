@@ -7,6 +7,7 @@ import AwardsModal from "./Modals/AwardsModal";
 import SystemModal from "./Modals/SystemModal";
 import LanguagesModal from "./Modals/LanguagesModal";
 import StoreLinksModal from "./Modals/StoreLinksModal";
+import MediaModal from "./Modals/MediaModal";
 import { getGameById, updateGameById } from "../../services/admin.api";
 
 export default function GameDetailAdmin() {
@@ -24,6 +25,7 @@ export default function GameDetailAdmin() {
   const [openSystem, setOpenSystem] = useState(false);
   const [openLanguages, setOpenLanguages] = useState(false);
   const [openStores, setOpenStores] = useState(false);
+  const [openMedia, setOpenMedia] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
@@ -96,7 +98,7 @@ export default function GameDetailAdmin() {
         interfaceLanguages: Array.isArray(merged.interfaceLanguages) ? merged.interfaceLanguages : [],
 
         soundtrack: Array.isArray(merged.soundtrack) ? merged.soundtrack : [],
-       
+
         storeLinks: Array.isArray(merged.storeLinks) ? merged.storeLinks : [],
       };
 
@@ -141,10 +143,10 @@ export default function GameDetailAdmin() {
     { key: "overview", label: "Overview", open: () => setOpenOverview(true) },
     { key: "creative", label: "Creative & Story", open: () => setOpenCreative(true) },
     { key: "awards", label: "Awards", open: () => setOpenAwards(true) },
-    { key: "system", label: "System", open: () => setOpenAwards(true)  },
-    { key: "languages", label: "Languages", open: () => setOpenLanguages(true)  },
-    { key: "stores", label: "Store Links", open: () => setOpenStores(true)  },
-    { key: "media", label: "Media" },
+    { key: "system", label: "System", open: () => setOpenSystem(true) },
+    { key: "languages", label: "Languages", open: () => setOpenLanguages(true) },
+    { key: "stores", label: "Store Links", open: () => setOpenStores(true) },
+    { key: "media", label: "Media", open: () => setOpenMedia(true) },
     { key: "credits", label: "Credits" },
     { key: "review", label: "Review" },
     { key: "trivia", label: "Trivia" },
@@ -216,6 +218,7 @@ export default function GameDetailAdmin() {
                     setOpenSystem(false);
                     setOpenLanguages(false);
                     setOpenStores(false);
+                    setOpenMedia(false);
                     break;
                   case "awards":
                     setOpenAwards(true);
@@ -224,6 +227,7 @@ export default function GameDetailAdmin() {
                     setOpenSystem(false);
                     setOpenLanguages(false);
                     setOpenStores(false);
+                    setOpenMedia(false);
                     break;
                   case "system":
                     setOpenSystem(true);
@@ -232,6 +236,7 @@ export default function GameDetailAdmin() {
                     setOpenAwards(false);
                     setOpenLanguages(false);
                     setOpenStores(false);
+                    setOpenMedia(false);
                     break;
                   case "languages":
                     setOpenLanguages(true);
@@ -240,6 +245,7 @@ export default function GameDetailAdmin() {
                     setOpenCreative(false);
                     setOpenAwards(false);
                     setOpenStores(false);
+                    setOpenMedia(false);
                     break;
                   case "stores":
                     setOpenStores(true);
@@ -248,6 +254,16 @@ export default function GameDetailAdmin() {
                     setOpenAwards(false);
                     setOpenSystem(false);
                     setOpenLanguages(false);
+                    setOpenMedia(false);
+                    break;
+                  case "media":
+                    setOpenMedia(true);
+                    setOpenOverview(false);
+                    setOpenCreative(false);
+                    setOpenAwards(false);
+                    setOpenSystem(false);
+                    setOpenLanguages(false);
+                    setOpenStores(false);
                     break;
                   default:
                     setOpenOverview(true);
@@ -256,6 +272,7 @@ export default function GameDetailAdmin() {
                     setOpenSystem(false);
                     setOpenLanguages(false);
                     setOpenStores(false);
+                    setOpenMedia(false);
                     break;
                 }
                 setIsEditing(true);
@@ -273,6 +290,8 @@ export default function GameDetailAdmin() {
                   ? "Languages"
                   : activeTab === "stores"
                   ? "Store Links"
+                  : activeTab === "media"
+                  ? "Media"
                   : "Overview"
               }`}
             </button>
@@ -291,6 +310,8 @@ export default function GameDetailAdmin() {
                     ? "ggdb:languages-save-request"
                     : activeTab === "stores"
                     ? "ggdb:stores-save-request"
+                    : activeTab === "media"
+                    ? "ggdb:media-save-request"
                     : "ggdb:overview-save-request";
                 window.dispatchEvent(new CustomEvent(evName));
                 setIsEditing(false);
@@ -311,56 +332,16 @@ export default function GameDetailAdmin() {
             className={`tab ${activeTab === t.key ? "active" : ""}`}
             onClick={() => {
               setActiveTab(t.key);
-              if (t.key === "overview") {
-                setOpenOverview(true);
-                setOpenCreative(false);
-                setOpenAwards(false);
-                setOpenSystem(false);
-                setOpenLanguages(false);
-                setOpenStores(false);
-              } else if (t.key === "creative") {
-                setOpenCreative(true);
-                setOpenOverview(false);
-                setOpenAwards(false);
-                setOpenSystem(false);
-                setOpenLanguages(false);
-                setOpenStores(false);
-              } else if (t.key === "awards") {
-                setOpenAwards(true);
-                setOpenOverview(false);
-                setOpenCreative(false);
-                setOpenSystem(false);
-                setOpenLanguages(false);
-                setOpenStores(false);
-              } else if (t.key === "system") {
-                setOpenSystem(true);
-                setOpenOverview(false);
-                setOpenCreative(false);
-                setOpenAwards(false);
-                setOpenLanguages(false);
-                setOpenStores(false);
-              } else if (t.key === "languages") {
-                setOpenLanguages(true);
-                setOpenOverview(false);
-                setOpenCreative(false);
-                setOpenAwards(false);
-                setOpenSystem(false);
-                setOpenStores(false);
-              } else if (t.key === "stores") {
-                setOpenStores(true);
-                setOpenOverview(false);
-                setOpenCreative(false);
-                setOpenAwards(false);
-                setOpenSystem(false);
-                setOpenLanguages(false);
-              } else {
-                setOpenOverview(false);
-                setOpenCreative(false);
-                setOpenAwards(false);
-                setOpenSystem(false);
-                setOpenLanguages(false);
-                setOpenStores(false);
-              }
+
+              setOpenOverview(false);
+              setOpenCreative(false);
+              setOpenAwards(false);
+              setOpenSystem(false);
+              setOpenLanguages(false);
+              setOpenStores(false);
+              setOpenMedia(false);
+
+              if (t.open) t.open();
               setIsEditing(false);
             }}
           >
@@ -376,6 +357,7 @@ export default function GameDetailAdmin() {
       <SystemModal open={openSystem} onClose={() => setOpenSystem(false)} editable={isEditing} data={game} onSave={handlePersist} />
       <LanguagesModal open={openLanguages} onClose={() => setOpenLanguages(false)} editable={isEditing} data={game} onSave={handlePersist} />
       <StoreLinksModal open={openStores} onClose={() => setOpenStores(false)} editable={isEditing} data={game} onSave={handlePersist} />
+      <MediaModal open={openMedia} onClose={() => setOpenMedia(false)} editable={isEditing} data={game} onSave={handlePersist} />
     </div>
   );
 }
