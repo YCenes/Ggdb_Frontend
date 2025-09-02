@@ -76,12 +76,55 @@ export default function AddGameModal({ open, onClose, onAdded }) {
 
   // ---------- utils ----------
   const normalize = (s) =>
-    (s || "")
-      .toLowerCase()
-      .replace(/[™®©]/g, "")
-      .replace(/[^\p{L}\p{N}\s]/gu, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+  (s || "")
+    .toLowerCase()
+    .replace(/[™®©]/g, "")
+    .replace(/\[(.*?)]/g, " ")
+    .replace(/[:\-–_|]/g, " ")
+    .replace(/\b(remaster(ed)?|remake|definitive|complete|deluxe|ultimate|goty|hd|edition|bundle|pack)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const titleSim = (a,b) => {
+  const A = normalize(a), B = normalize(b);
+  if (!A || !B) return 0;
+  if (A === B) return 1;
+  if (A.includes(B) || B.includes(A)) return 0.96;
+  const d = lev(A, B); // sizde var
+  const maxLen = Math.max(A.length, B.length);
+  return 1 - d / Math.max(1, maxLen);
+};
+const jaccard = (a = [], b = []) => {
+  const A = new Set(a.map(s => s.toLowerCase()));
+  const B = new Set(b.map(s => s.toLowerCase()));
+  const inter = [...A].filter(x => B.has(x)).length;
+  const union = new Set([...A, ...B]).size || 1;
+  return inter / union;
+};
+
+const yearClose = (ya, yb) => (ya == null || yb == null) ? true : Math.abs(ya - yb) <= 1;
+const slugEqual = (a,b) => !!a && !!b && normalize(a) === normalize(b);
+
+const pairScore = (g, r) => {
+  let s = similarity(g.name, r.name);               // 0..1
+  if (g.year && r.year && Math.abs(g.year - r.year) <= 1) s += 0.03;
+  if (g.platforms?.length && r.platforms?.length)   s += 0.02 * jaccard(g.platforms, r.platforms);
+  return Math.min(1, s);
+};
+
+// güçlü eşleşme koşulu
+// Güçlü eşleşme kriteri
+const isStrongMatch = (g, r, s) => {
+  const nameEq = normalize(g.name) === normalize(r.name);
+  const yearOk = (!g.year || !r.year) || Math.abs(g.year - r.year) <= 1;
+  return (s >= 0.94 && yearOk) || (nameEq && s >= 0.90);
+};
+
+const dedupeByKey = (arr, keyFn) => {
+  const seen = new Set(); const out = [];
+  for (const x of arr) { const k = keyFn(x); if (seen.has(k)) continue; seen.add(k); out.push(x); }
+  return out;
+};
 
   const lev = (a, b) => {
     a = a || ""; b = b || "";
@@ -116,6 +159,8 @@ export default function AddGameModal({ open, onClose, onAdded }) {
       .split(",")
       .map(x => x.trim())
       .filter(Boolean);
+
+  const parseYear = (y) => (Number.isFinite(+y) ? +y : null);
 
   const parseLines = (s) =>
     (s || "")
@@ -196,50 +241,88 @@ const parseTrailersLines = (s) =>
 
   // ---------- AUTO: search (STRICT) ----------
   const runSearch = async () => {
-    const term = q.trim();
-    if (!term) return;
-    setLoading(true);
-    setResults([]);
-    setPicked(null);
-    setMerged(null);
+  const term = q.trim();
+  if (!term) return;
+  setLoading(true);
+  setResults([]);
+  setPicked(null);
+  setMerged(null);
 
-    try {
-      const [igdbRes, rawgRes] = await Promise.all([
-        API.get("/igdb/search", { params: { q: term, page: 1, pageSize: 20, dedupe: true, details: false } }),
-        API.get("/rawg/search", { params: { q: term, page: 1, pageSize: 20 } }),
-      ]);
+  try {
+    const [igdbRes, rawgRes] = await Promise.all([
+      API.get("/igdb/search", {
+        params: { q: term, page: 1, pageSize: 20, dedupe: true, details: true, useSearch: true },
+      }),
+      API.get("/rawg/search", { params: { q: term, page: 1, pageSize: 20 } }),
+    ]);
 
-      const igdbItems = (igdbRes?.data?.items || []).map(x => ({ id: x.id ?? x.Id, name: x.name ?? x.Name }));
-      const rawgItems = (rawgRes?.data?.items || []).map(x => ({ id: x.id ?? x.Id, name: x.name ?? x.Name }));
+    // IGDB: details=true olduğundan yıl + platform geliyor
+    const igdbItems = (igdbRes?.data?.items || []).map(x => ({
+      id:        x.id ?? x.Id,
+      name:      x.name ?? x.Name,
+      year:      parseYear(x.year ?? x.Year),
+      platforms: x.platforms ?? x.Platforms ?? [],
+    }));
 
-      const pairs = [];
-      for (const g of igdbItems) {
-        let best = null, maxS = 0;
-        for (const r of rawgItems) {
-          const s = similarity(g.name, r.name);
-          if (s > maxS) { maxS = s; best = r; }
-        }
-        if (best && maxS >= 0.93) {
-          const label = (g.name?.length || 0) >= (best.name?.length || 0) ? g.name : best.name;
-          pairs.push({ label, igdbId: g.id, rawgId: best.id, score: maxS });
+    // RAWG: 1. adımda API'yi genişlettik (year/platforms geliyor)
+    const rawgItems = (rawgRes?.data?.items || []).map(x => ({
+      id:        x.id ?? x.Id,
+      name:      x.name ?? x.Name,
+      year:      parseYear(x.year ?? x.Year),
+      platforms: x.platforms ?? x.Platforms ?? [],
+    }));
+
+    // === Çoklu aday mantığı ===
+    const pairs = [];
+    const THRESH = 0.94;
+
+    for (const g of igdbItems) {
+      for (const r of rawgItems) {
+        const s = pairScore(g, r);
+        if (isStrongMatch(g, r, s) && s >= THRESH) {
+          const labelBase = (g.name?.length || 0) >= (r.name?.length || 0) ? g.name : r.name;
+          const label = g.year ? `${labelBase} (${g.year})` : (r.year ? `${labelBase} (${r.year})` : labelBase);
+          pairs.push({
+            label,
+            igdbId: g.id,
+            rawgId: r.id,
+            score: s,
+            year: g.year ?? r.year ?? null,
+          });
         }
       }
-
-      pairs.sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
-      const seen = new Set();
-      const uniq = [];
-      for (const p of pairs) {
-        const key = normalize(p.label);
-        if (seen.has(key)) continue;
-        seen.add(key);
-        uniq.push(p);
-      }
-
-      setResults(uniq);
-    } finally {
-      setLoading(false);
     }
-  };
+
+    // Aynı IGDB-RAWG çifti tekrarlanmasın
+    const key = p => `${p.igdbId}-${p.rawgId}`;
+    const seen = new Set();
+    const uniqPairs = [];
+    for (const p of pairs.sort((a,b) => b.score - a.score || a.label.localeCompare(b.label))) {
+      if (seen.has(key(p))) continue;
+      seen.add(key(p));
+      uniqPairs.push(p);
+    }
+
+    // Eşleşemeyen IGDB sonuçlarını da göster (kullanıcı elle seçebilsin)
+    const matchedIgdb = new Set(uniqPairs.map(p => p.igdbId));
+    for (const g of igdbItems) {
+      if (!matchedIgdb.has(g.id)) {
+        uniqPairs.push({
+          label: g.year ? `${g.name} (${g.year})` : g.name,
+          igdbId: g.id,
+          rawgId: null,
+          score: 0.5,
+          year: g.year ?? null,
+        });
+      }
+    }
+
+    setResults(uniqPairs);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // ---------- AUTO: preview ----------
   const doPreview = async () => {
