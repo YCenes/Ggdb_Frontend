@@ -411,3 +411,120 @@ $field-gap: 16px;
 
 /* Yardımcı */
 .form-label { display:block; margin: 10px 0 6px; font-size:14px; }
+
+
+
+/* === GLOBAL FIXES (taşmayı ve beyaz şeridi yok et) === */
+html, body {
+  height: 100%;
+  background: #000; /* arka plan koyu kalsın */
+}
+
+.register-page {
+  min-height: 100vh;     /* tam ekran */
+  width: 100%;           /* 100vw yerine 100% */
+  overflow-x: hidden;    /* olası taşmaları gizle */
+}
+
+/* İç wrap her genişlikte ortaya gelsin */
+.register-page .register-inner {
+  width: 100%;
+}
+
+/* === KART GENİŞLİKLERİ === */
+/* 100vw KULLANMA! Yalnızca % + max-width */
+.register-card {
+  width: 100%;         /* << min(500px, 100vw) yerine */
+  max-width: 520px;    /* masaüstünde 520px’i geçme */
+  margin-inline: auto; /* ortala, yana kayma yapmasın */
+}
+
+/* Küçük ekranlarda içerik dolgusu hafiflesin */
+@media (max-width: 640px) {
+  .register-card .card-body  { padding: 20px; }
+  .register-card .card-stats { gap: 12px; padding: 14px 16px; }
+}
+
+/* === FORM & GRID — güvenli kırılımlar === */
+.register-card form .date-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* varsayılan üçlü */
+  gap: 12px;
+}
+
+/* 480px ve altı: 2+1 (yıl altta) */
+@media (max-width: 480px) {
+  .register-card form .date-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .register-card form .date-row .date-year {
+    grid-column: 1 / -1;
+  }
+}
+
+/* 360px ve altı: tek sütun (taşma sıfır) */
+@media (max-width: 360px) {
+  .register-card { max-width: 100%; }  /* çok dar cihazlar */
+  .register-card form .date-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* input yüksekliği ve label yerleşimi ufalır */
+  .form-field .input { height: 52px; padding: 10px 40px 10px 12px; }
+  .floating label { left: 12px; transform: translateY(12px) scale(1); }
+}
+
+/* Kısa yükseklikli ekranlarda (küçük laptop/tablet) taşma engeli */
+@media (max-height: 700px) {
+  .register-page { align-items: flex-start; }
+  .register-card { margin-top: 24px; margin-bottom: 24px; }
+}
+
+/* Hareket azaltma tercihi */
+@media (prefers-reduced-motion: reduce) {
+  .register-page::before,
+  .floating label,
+  .register-card .stepbar .track .progress { transition: none !important; }
+}
+
+
+/* React-Select alanı ile alttaki input arasında boşluk */
+.rs-field {
+  margin-bottom: 16px; /* $field-gap ile de eşleyebilirsin */
+}
+
+/* Görsel uyum için (classNamePrefix='rs') */
+.rs__control {
+  backdrop-filter: blur(0.5px);
+}
+.rs__menu {
+  border: 1px solid rgba(255,255,255,.1);
+}
+.rs__option {
+  font-weight: 500;
+}
+
+/* Flag img (eğer kullanıyorsan) */
+.flag-icon { width: 18px; height: 18px; vertical-align: -3px; }
+
+
+/* classNamePrefix="rs" kullandığın için */
+.rs__single-value { color: #fff !important; }
+.rs__input-container input { color: #fff !important; }
+
+/* Menüdeki seçenek metinleri */
+.rs__option { color: #e5e7eb; }
+.rs__option--is-focused { background: rgba(250,204,21,.15); color: #fff; }
+.rs__option--is-selected { background: #facc15; color: #111; }
+
+
+/* React-Select (classNamePrefix='rs') renk fixleri */
+.rs__single-value { color: #fff !important; }
+.rs__input-container input { color: #fff !important; }
+
+.rs__menu, .rs__menu-list { background: #0b1220 !important; }
+.rs__option { color: #fff !important; opacity: 1 !important; }
+.rs__option--is-focused { background: rgba(250,204,21,.15) !important; color: #fff !important; }
+.rs__option--is-selected { background: #facc15 !important; color: #111 !important; }

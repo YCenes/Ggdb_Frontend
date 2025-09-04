@@ -125,6 +125,10 @@ export default function GameDetailAdmin() {
         ggdbRating: dto.ggdbRating,
         images,
         videos,
+        crew: dto.crew ?? dto.Crew ?? [],
+        timeToBeat_Hastily: dto.timeToBeat_Hastily ?? dto.TimeToBeat_Hastily ?? null,
+        timeToBeat_Normally: dto.timeToBeat_Normally ?? dto.TimeToBeat_Normally ?? null, 
+        timeToBeat_Completely: dto.timeToBeat_Completely ?? dto.TimeToBeat_Completely ?? null,
       };
 
       if (alive) setGame(viewModel);
@@ -182,6 +186,14 @@ export default function GameDetailAdmin() {
 
         images: Array.isArray(merged.images) ? merged.images : [],
         videos: Array.isArray(merged.videos) ? merged.videos : [],
+
+        crew: Array.isArray(merged.crew) ? merged.crew : [], 
+
+        timeToBeat_Hastily:    merged.timeToBeat_Hastily    !== "" && merged.timeToBeat_Hastily    != null ? Number(merged.timeToBeat_Hastily)    : null,
+        timeToBeat_Normally:   merged.timeToBeat_Normally   !== "" && merged.timeToBeat_Normally   != null ? Number(merged.timeToBeat_Normally)   : null,
+        timeToBeat_Completely: merged.timeToBeat_Completely !== "" && merged.timeToBeat_Completely != null ? Number(merged.timeToBeat_Completely) : null,
+
+        
       };
 
       try {

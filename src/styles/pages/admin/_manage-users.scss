@@ -1,0 +1,182 @@
+/* ===================== Manage Users (Bootstrap) — Dark UI ===================== */
+.manage-users-bs {
+  /* Tema */
+  --bg: #0b0f17;
+  --panel: #0f131b;
+  --panel-2: #151b25;
+  --line: rgba(255,255,255,.08);
+  --muted: #94a3b8;
+  --text: #e2e8f0;
+  --accent: #7c6cff;
+  --good: #3b82f6;     /* mavi */
+  --warn: #f59e0b;     /* amber */
+  --danger: #ef4444;   /* kırmızı */
+
+  color-scheme: dark;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 24px 24px, rgba(255,255,255,.06) 1px, transparent 1px) 0 0/24px 24px,
+    radial-gradient(circle at 12px 12px, rgba(255,255,255,.04) 1px, transparent 1px) 0 0/24px 24px,
+    var(--bg);
+}
+
+/* Başlık küçük metni */
+.manage-users-bs .text-secondary { color: var(--muted) !important; }
+
+/* Tabs */
+.manage-users-bs .tab-pill{
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #1e293b;
+  color: #cbd5e1;
+}
+.manage-users-bs .tab-pill.btn-primary{
+  background: linear-gradient(180deg,#4f7df5,#2d6be0);
+  border-color:#214ebd;
+  color:#fff;
+  box-shadow: 0 10px 22px rgba(33,78,189,.35), inset 0 1px 0 rgba(255,255,255,.15);
+}
+
+/* Arama + selectler */
+.manage-users-bs .form-control,
+.manage-users-bs .form-select{
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.manage-users-bs .form-control:focus,
+.manage-users-bs .form-select:focus{
+  border-color: transparent;
+  box-shadow: 0 0 0 .2rem rgba(124,108,255,.35);
+}
+.manage-users-bs .form-control.ps-5{ padding-left: 2.2rem !important; }
+
+/* Kart ve tablo */
+.manage-users-bs .card{
+  background: linear-gradient(180deg, rgba(10,14,22,.6), rgba(10,14,22,.25));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.manage-users-bs .table{
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.manage-users-bs .table-dark > :not(caption) > * > *{
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+.manage-users-bs thead.table-header{
+  position: sticky; top: 0; z-index: 5;
+  background: linear-gradient(180deg, rgba(20,24,34,.92), rgba(20,24,34,.70));
+  border-bottom: 1px solid var(--line);
+}
+.manage-users-bs thead.table-header th{
+  font-weight: 700; color: #8ea0b9; font-size: 13px;
+  height: 56px; vertical-align: middle;
+}
+
+/* Satırlar */
+.manage-users-bs tbody tr{
+  background: radial-gradient(900px 160px at 0% 0%, rgba(124,108,255,.04), transparent 60%);
+}
+.manage-users-bs tbody tr:hover{
+  background: rgba(124,108,255,.06);
+}
+.manage-users-bs td{
+  padding-top: 14px; padding-bottom: 14px;
+}
+
+/* Username mini kartı */
+.manage-users-bs .rounded-3{ border-radius: 10px !important; }
+.manage-users-bs .fw-semibold{ font-weight: 600 !important; }
+
+/* ROLE sütunu – başlık ve hücre tam ortasında */
+.manage-users-bs .role-th{ text-align:center; }
+.manage-users-bs .role-td{ vertical-align: middle; text-align:center; }
+.manage-users-bs .role-cell{
+  display:flex; align-items:center; justify-content:center;
+}
+.manage-users-bs .role-select{
+  width: 120px;
+  margin: 0 auto;                 /* ortalama */
+  appearance:none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 10px;
+  font-weight: 700;
+  text-align: center;
+  padding-right: 24px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #9aa7ff 50%),
+    linear-gradient(135deg, #9aa7ff 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 10px) 50%,
+    100% 0;
+  background-size: 6px 6px, 6px 6px, 2.8em 2.8em;
+  background-repeat: no-repeat;
+}
+
+/* Ülke & aksiyonlar */
+.manage-users-bs .icon-btn{
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border-radius: 10px; border: 1px solid var(--line);
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,.04);
+}
+.manage-users-bs .btn-view{ background:#0b1e4b; color:#cfe1ff; border-color:#16306e; }
+.manage-users-bs .btn-warn{ background:#3a2d12; color:#ffe6b0; border-color:#5a4516; }
+.manage-users-bs .btn-del { background:#3a1b1b; color:#ffd1d1; border-color:#5b2525; }
+.manage-users-bs .btn-view:hover{ filter:brightness(1.08); }
+.manage-users-bs .btn-warn:hover{ filter:brightness(1.08); }
+.manage-users-bs .btn-del:hover { filter:brightness(1.08); }
+
+/* Pagination */
+.manage-users-bs .btn-group .btn{
+  border-radius: 10px !important;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+}
+.manage-users-bs .btn-group .btn-primary{
+  background:#1a2340; border-color:#384b86; color:#fff;
+  box-shadow: 0 0 0 2px #384b86 inset;
+}
+
+/* Footer çizgisi */
+.manage-users-bs .border-top{ border-top: 1px solid var(--line) !important; }
+
+/* Badge */
+.manage-users-bs .badge{
+  background:#ef4444; color:#fff; font-weight:800; border-radius:999px;
+}
+
+/* Küçük ekran davranışı (sütun gizlemeleri zaten BS sınıflarında) */
+@media (max-width: 576px){
+  .manage-users-bs thead.table-header th{ font-size: 12px; }
+  .manage-users-bs .role-select{ width: 130px; }
+}
+
+
+/* Actions sütunu butonları tam ortala */
+.manage-users-bs .icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+
+  display: flex;              /* flex ile */
+  align-items: center;        /* dikey ortalama */
+  justify-content: center;    /* yatay ortalama */
+
+  padding: 0;                 /* ekstra boşluğu kaldır */
+  line-height: 1;             /* ikon dikey ortada kalsın */
+}
+
+.flag-icon {
+  display: inline-block;
+  vertical-align: -2px; /* metinle hizalansın */
+  border-radius: 3px;   /* istersen hafif köşe */
+}

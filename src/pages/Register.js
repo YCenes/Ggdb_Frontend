@@ -2,24 +2,51 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../services/api"; // baseURL: http://localhost:5201/api
+import Flag from "../components/Flag";
+import Select, { components } from "react-select";
 import "../styles/pages/_register.scss"; 
 
 import BG from "../assets/registerbg.avif";
 
 // Basit ülke listesi (emoji bayrak + ad + ISO kod)
 const COUNTRIES = [
-  { code: "TR", name: "Türkiye", flag: "🇹🇷" },
-  { code: "US", name: "United States", flag: "🇺🇸" },
-  { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
-  { code: "DE", name: "Germany", flag: "🇩🇪" },
-  { code: "FR", name: "France", flag: "🇫🇷" },
-  { code: "ES", name: "Spain", flag: "🇪🇸" },
-  { code: "IT", name: "Italy", flag: "🇮🇹" },
-  { code: "CA", name: "Canada", flag: "🇨🇦" },
-  { code: "NL", name: "Netherlands", flag: "🇳🇱" },
-  { code: "JP", name: "Japan", flag: "🇯🇵" },
+  { code: "TR", name: "Türkiye" },
+  { code: "US", name: "United States" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "DE", name: "Germany" },
+  { code: "FR", name: "France" },
+  { code: "ES", name: "Spain" },
+  { code: "IT", name: "Italy" },
+  { code: "CA", name: "Canada" },
+  { code: "NL", name: "Netherlands" },
+  { code: "JP", name: "Japan" },
 ];
 
+const countryOptions = COUNTRIES.map(c => ({
+  value: c.code,
+  label: c.name,
+  data: c
+}));
+
+// Flag’li Option
+const Option = (props) => (
+  <components.Option {...props}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <Flag code={props.data.data.code} title={props.data.data.name} />
+      <span>{props.data.data.name}</span>
+    </div>
+  </components.Option>
+);
+
+// Seçili değer (input’ta görünen)
+const SingleValue = (props) => (
+  <components.SingleValue {...props}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <Flag code={props.data.data.code} title={props.data.data.name} />
+      <span>{props.data.data.name}</span>
+    </div>
+  </components.SingleValue>
+);
 
 
 const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
@@ -45,7 +72,7 @@ export default function Register() {
   const [month, setMonth] = useState("");
   const [day, setDay] = useState("");
   const [year, setYear] = useState("");
-  const [country, setCountry] = useState(COUNTRIES[1]); // US default (ekrandaki gibi)
+  const [country, setCountry] = useState(COUNTRIES[1]);
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -58,8 +85,29 @@ export default function Register() {
   const [emailAvailable, setEmailAvailable] = useState(null);   
   const [checkingEmail, setCheckingEmail]   = useState(false);
   const [counts , setCounts] = useState({ totalUsers: 0, totalGames: 0 });
-  
 
+
+  const selectStyles = {
+    control: (base) => ({
+      ...base,
+      backgroundColor: "rgba(0,0,0,0.40)",
+      borderColor: "rgba(255,255,255,.15)",
+      borderRadius: 12,
+      minHeight: 48,
+      color: "#fff"
+    }),
+    menu: (base) => ({ ...base, backgroundColor: "#0c1322" }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isFocused ? "#172037" : "transparent",
+      color: "#e8eef8",
+      cursor: "pointer"
+    }),
+    singleValue: (base) => ({ ...base, color: "#fff" }),
+    input: (base) => ({ ...base, color: "#fff" }),
+    placeholder: (base) => ({ ...base, color: "rgba(255,255,255,.7)" }),
+  };
+  
 
   const emailValid = useMemo(
     () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
@@ -133,10 +181,34 @@ const YEARS = useMemo(() => {
       setOk("Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz…");
       setTimeout(() => navigate("/login"), 900);
     } catch (ex) {
-      const msg = typeof ex?.response?.data === "string"
-        ? ex.response.data
-        : "Kayıt sırasında bir hata oluştu.";
-      setErr(msg);
+     const srv = ex?.response;
+  // ModelState hatalarını yakala
+  const modelErrors = srv?.data?.errors;
+  let msg =
+    (typeof srv?.data === "object" && srv.data?.message) ? srv.data.message :
+    (typeof srv?.data === "string") ? srv.data :
+    srv?.statusText || "Kayıt sırasında bir hata oluştu.";
+
+  if (modelErrors && typeof modelErrors === "object") {
+    const firstKey = Object.keys(modelErrors)[0];
+    const firstMsg = modelErrors[firstKey]?.[0];
+    if (firstMsg) msg = firstMsg; // ekrana en anlamlı ilk hatayı ver
+    console.error("Model validation errors:", modelErrors);
+  }
+
+  console.error("Register error:", {
+    status: srv?.status,
+    data: srv?.data,
+    sentBody: {
+      userName: userName.trim(),
+      email: email.trim(),
+      birthdate: birthIso,
+      country: country.name,
+      // password intentionally not logged
+    },
+  });
+
+  setErr(msg);
     } finally {
       setLoading(false);
     }
@@ -190,6 +262,11 @@ const YEARS = useMemo(() => {
 
 const totalUser = counts?.totalUsers ?? 0;
 const totalGame = counts?.totalGames ?? 0;
+
+
+  
+
+
   return (
     <div
       className="register-page"
@@ -323,20 +400,55 @@ const totalGame = counts?.totalGames ?? 0;
 
                 {/* COUNTRY (SELECT) */}
                 <label className="form-label">Country *</label>
-              <select
-                className="select"
-                value={country.code}
-                onChange={(e) =>
-                  setCountry(COUNTRIES.find((c) => c.code === e.target.value) || COUNTRIES[0])
-                }
-                required
-              >
-                {COUNTRIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.name}
-                  </option>
-                ))}
-              </select>
+<div className="rs-field">   {/* ALT BOŞLUK için sarmal */}
+  <Select
+    classNamePrefix="rs"      // CSS için prefix
+    options={countryOptions}
+    value={countryOptions.find(o => o.value === country.code)}
+    onChange={(opt) => {
+      const c = COUNTRIES.find(x => x.code === opt.value) || COUNTRIES[0];
+      setCountry(c);
+    }}
+    // MENÜ clipping fix
+    menuPortalTarget={document.body}
+    menuPosition="fixed"
+    styles={{
+      control: (base, state) => ({
+        ...base,
+        minHeight: 56,               // input yüksekliği ile uyum
+        borderRadius: 12,
+        backgroundColor: "rgba(0,0,0,.30)",
+        borderColor: "rgba(255,255,255,.15)",
+        boxShadow: state.isFocused ? "0 0 0 3px rgba(250,204,21,.35)" : "none",
+        ":hover": { borderColor: "rgba(255,255,255,.25)" },
+      }),
+      valueContainer: (base) => ({ ...base, padding: "8px 12px" }),
+      input: (base) => ({ ...base, color: "#fff" }),
+      singleValue: (base) => ({ ...base, color: "#fff" }),
+      placeholder: (base) => ({ ...base, color: "rgba(255,255,255,.6)" }),
+      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+      menu: (base) => ({ ...base, zIndex: 9999, borderRadius: 12, overflow: "hidden" }),
+    }}
+    components={{
+      Option,
+      SingleValue,
+      DropdownIndicator: null,
+      IndicatorSeparator: () => null,
+    }}
+    theme={(theme) => ({
+      ...theme,
+      colors: {
+        ...theme.colors,
+        primary: "#facc15",
+        primary25: "rgba(250,204,21,.15)",
+        primary50: "rgba(250,204,21,.25)",
+        neutral0: "#0b1220",
+        neutral80: "#fff",
+      },
+    })}
+  />
+</div>
+
 
                 <div className="form-field floating">
                   <input

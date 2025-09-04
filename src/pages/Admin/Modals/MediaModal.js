@@ -208,6 +208,14 @@ export default function MediaModal({ open, onClose, editable = true, data = {}, 
     
   };
 
+  const handleVideoTitleChange = (idx, value) => {
+  setVids(prev => {
+    const next = prev.slice();
+    next[idx] = { ...next[idx], title: value };
+    return next;
+  });
+};
+
   useEffect(() => {
     const onGlobalSave = () => {
       if (!open) return;
@@ -340,7 +348,7 @@ export default function MediaModal({ open, onClose, editable = true, data = {}, 
                     <input type="text" value={it.url} readOnly />
 
                     <label>Title</label>
-                    <input type="text" value={it.title} readOnly />
+                    <input type="text" value={it.title} onChange={(e) => handleVideoTitleChange(i, e.target.value)} disabled={!editable} />
 
                     <label className="meta-label">Metadata</label>
 

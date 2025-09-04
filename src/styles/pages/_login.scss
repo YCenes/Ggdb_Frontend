@@ -256,3 +256,90 @@ $muted: #9ca3af;
     margin-top: 10px;
   }
 }
+
+/* ====== Base (mevcut stillerin üstüne gelecek ufak dokunuşlar) ====== */
+.login-page {
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+.login-card {
+  /* Eski width: 360px; max-width: 90%; yerine daha esnek bir clamp */
+  width: clamp(300px, 90vw, 420px);
+  padding: 32px;
+  border-radius: 14px;
+}
+
+.login-input { min-height: 44px; }      /* dokunmatik hedefler */
+.login-btn   { min-height: 44px; }
+
+.social-button { width: 44px; height: 44px; }
+
+/* Hareket duyarlı kullanıcılar için animasyonları azalt */
+@media (prefers-reduced-motion: reduce) {
+  .social-button,
+  .login-btn { transition: none !important; }
+}
+
+/* ====== Küçük ekranlar (<= 480px) ====== */
+@media (max-width: 480px) {
+  .login-overlay {
+    /* küçük ekranda okunurluk için biraz daha koyu */
+    background: linear-gradient(to top, rgba(0,0,0,.94), rgba(0,0,0,.6), rgba(0,0,0,.4));
+  }
+
+  .login-card {
+    padding: 22px;
+    border-radius: 12px;
+    backdrop-filter: blur(2px);
+  }
+
+  .login-title { font-size: 20px; }
+  .login-sub   { font-size: 13px; }
+
+  .login-form { gap: 12px; }
+
+  .login-input {
+    font-size: 14px;
+    padding: 11px 12px;
+    padding-right: 44px;
+  }
+
+  .login-password .login-input { padding-right: 42px; }
+
+  .login-btn {
+    margin-top: 2px;
+    font-size: 14px;
+  }
+
+  .login-social {
+    gap: 10px;
+    flex-wrap: wrap;          /* dar ekranda alt satıra geçsin */
+  }
+  .social-button { width: 40px; height: 40px; }
+  .social-icon   { font-size: 18px; }
+
+  .login-divider::before,
+  .login-divider::after { width: 32%; }  /* çizgileri biraz kısalt */
+}
+
+/* ====== Orta ekranlar (481px – 768px) ====== */
+@media (min-width: 481px) and (max-width: 768px) {
+  .login-card { padding: 28px; }
+  .login-title { font-size: 22px; }
+  .login-sub   { font-size: 14px; }
+  .login-social { gap: 12px; }
+}
+
+/* ====== Büyük ekranlar (>= 992px) ====== */
+@media (min-width: 992px) {
+  .login-card { width: clamp(380px, 28vw, 520px); padding: 40px; }
+  .login-title { font-size: 26px; }
+  .login-sub   { font-size: 15px; }
+}
+
+/* ====== Yüksekliği kısa ekranlar (ör. küçük laptop) ====== */
+@media (max-height: 700px) {
+  .login-page { align-items: flex-start; }
+  .login-card { margin-top: 24px; margin-bottom: 24px; }
+}

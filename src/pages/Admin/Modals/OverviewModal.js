@@ -1,9 +1,7 @@
 // src/pages/admin/modals/OverviewModal.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import "../../../styles/pages/admin/_game-detail-admin.scss";
-import TagInput from "./TagInput"
-
-
+import TagInput from "./TagInput";
 
 /** Basit bottom modal (header actions YOK) */
 function BottomModal({ open, onClose, children }) {
@@ -19,11 +17,24 @@ function BottomModal({ open, onClose, children }) {
 }
 
 export default function OverviewModal({ open, onClose, editable, data, onSave }) {
-  // Modal içi taslak (draft) – Save ile parent’a aktarılır
-  const [draft, setDraft] = useState(data);
-  useEffect(() => { setDraft(data); }, [data, open]);
+  // Modal içi taslak – Save ile parent’a aktarılır
+  const [draft, setDraft] = useState({
+    ...(data || {}),
+    timeToBeat_Hastily:    data?.timeToBeat_Hastily    ?? null,
+    timeToBeat_Normally:   data?.timeToBeat_Normally   ?? null,
+    timeToBeat_Completely: data?.timeToBeat_Completely ?? null,
+  });
 
-  // Parent Save butonuna basınca, buradan onSave'i tetiklemek için
+  useEffect(() => {
+    setDraft({
+      ...(data || {}),
+      timeToBeat_Hastily:    data?.timeToBeat_Hastily    ?? null,
+      timeToBeat_Normally:   data?.timeToBeat_Normally   ?? null,
+      timeToBeat_Completely: data?.timeToBeat_Completely ?? null,
+    });
+  }, [data, open]);
+
+  // Parent Save butonuna basınca, buradan onSave'i tetikle
   useEffect(() => {
     const handler = () => onSave(draft);
     window.addEventListener("ggdb:overview-save-request", handler);
@@ -31,28 +42,33 @@ export default function OverviewModal({ open, onClose, editable, data, onSave })
   }, [draft, onSave]);
 
   const bind = useMemo(() => ({
-  text: (k) => ({
-    value: draft[k] && draft[k].trim() !== "" 
-      ? draft[k] 
-      : (!editable ? "-" : ""),   // sadece readonly modda "-"
-    readOnly: !editable,
-    onChange: (e) => setDraft({ ...draft, [k]: e.target.value }),
-  }),
-  number: (k) => ({
-    value: draft[k] !== undefined && draft[k] !== null && draft[k] !== ""
-      ? draft[k]
-      : (!editable ? "-" : ""),
-    readOnly: !editable,
-    onChange: (e) => setDraft({ ...draft, [k]: e.target.value }),
-    inputMode: "numeric",
-  }),
-}), [draft, editable]);
-
+    text: (k) => ({
+      value:
+        draft[k] && String(draft[k]).trim() !== ""
+          ? draft[k]
+          : (!editable ? "-" : ""),
+      readOnly: !editable,
+      onChange: (e) => setDraft({ ...draft, [k]: e.target.value }),
+    }),
+    number: (k) => ({
+      // read-only görünümde "-" göster; edit’te boş string ver
+      value:
+        draft[k] !== undefined && draft[k] !== null && draft[k] !== ""
+          ? draft[k]
+          : (!editable ? "-" : ""),
+      readOnly: !editable,
+      onChange: (e) =>
+        setDraft({
+          ...draft,
+          [k]: e.target.value === "" ? null : Number(e.target.value),
+        }),
+      inputMode: "numeric",
+    }),
+  }), [draft, editable]);
 
   return (
     <BottomModal open={open} onClose={onClose}>
       <div className="gd-form is-insheet big">
-        {/* ÜSTTE tek başlık/aksiyon olduğu için burada yok */}
         <div className="grid">
           <div className="col">
             <label>Game Title</label>
@@ -79,7 +95,7 @@ export default function OverviewModal({ open, onClose, editable, data, onSave })
           <div className="col">
             <label>Platforms</label>
             <TagInput
-              values={draft.platforms}
+              values={draft.platforms || []}
               setValues={(v) => setDraft({ ...draft, platforms: v })}
               placeholder="Type and press enter"
               disabled={!editable}
@@ -89,7 +105,7 @@ export default function OverviewModal({ open, onClose, editable, data, onSave })
           <div className="col">
             <label>Genres</label>
             <TagInput
-              values={draft.genres}
+              values={draft.genres || []}
               setValues={(v) => setDraft({ ...draft, genres: v })}
               placeholder="Type and press comma..."
               disabled={!editable}
@@ -98,25 +114,44 @@ export default function OverviewModal({ open, onClose, editable, data, onSave })
           <div className="col">
             <label>Tags</label>
             <TagInput
-              values={draft.tags}
+              values={draft.tags || []}
               setValues={(v) => setDraft({ ...draft, tags: v })}
               placeholder="Type and press comma..."
               disabled={!editable}
             />
           </div>
 
+          {/* === Time to Beat === */}
           <div className="col trio">
             <div>
-              <label>🎮 Main Story</label>
-              <input {...bind.text("mainStory")} placeholder="e.g. 10" />
+              <label>🎮 Main Story (hours)</label>
+              <input
+                type={editable ? "number" : "text"}
+                min="0"
+                step="1"
+                placeholder="e.g. 10"
+                {...bind.number("timeToBeat_Hastily")}
+              />
             </div>
             <div>
-              <label>❇️ Extras</label>
-              <input {...bind.text("extras")} placeholder="e.g. 15" />
+              <label>❇️ Extras (hours)</label>
+              <input
+                type={editable ? "number" : "text"}
+                min="0"
+                step="1"
+                placeholder="e.g. 15"
+                {...bind.number("timeToBeat_Normally")}
+              />
             </div>
             <div>
-              <label>🏆 Completionist</label>
-              <input {...bind.text("completionist")} placeholder="e.g. 25" />
+              <label>🏆 Completionist (hours)</label>
+              <input
+                type={editable ? "number" : "text"}
+                min="0"
+                step="1"
+                placeholder="e.g. 25"
+                {...bind.number("timeToBeat_Completely")}
+              />
             </div>
           </div>
 
