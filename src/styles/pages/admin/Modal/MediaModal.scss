@@ -53,4 +53,36 @@
 @media (max-width: 780px) {
   .media-grid.three-fixed { grid-template-columns: repeat(1, 360px); justify-content: center; }
 }
+/* Header action buttons (gradient look) */
+.btn.big { padding: 12px 18px; font-weight: 700; border-radius: 14px; }
+.btn.gradient { border: 0; color: #fff; box-shadow: 0 10px 24px rgba(0,0,0,.2); }
+.btn.gradient.blue  { background: linear-gradient(90deg,#0ea5e9,#2563eb); }
+.btn.gradient.pink  { background: linear-gradient(90deg,#ec4899,#8b5cf6); }
+.header-actions { display:flex; gap:12px; }
+
+/* No Preview placeholder */
+.media-img.placeholder{
+  height: 220px;
+  background:#121926;
+  border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:10px;
+}
+.media-img.placeholder .emoji{ font-size:28px; opacity:.9; }
+.muted{ color:#94a3b8; font-size:14px; }
+
+/* Hover'da çıkan kırmızı X */
+.media-card { position: relative; }
+.media-card .media-preview { position: relative; }
+.media-card .kill-btn{
+  position:absolute; left:12px; top:12px;
+  width:36px; height:36px; border:0; border-radius:9999px;
+  background:#ef4444; color:#fff; font-size:18px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 6px 16px rgba(239,68,68,.35);
+  cursor:pointer; opacity:0; transform:scale(.9); pointer-events:none;
+  transition:opacity .18s ease, transform .18s ease, filter .12s ease;
+}
+.media-card:hover .kill-btn{ opacity:1; transform:scale(1); pointer-events:auto; }
+.media-card .kill-btn:hover{ filter:brightness(.95); }
 

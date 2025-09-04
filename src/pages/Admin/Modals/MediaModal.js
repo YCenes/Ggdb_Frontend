@@ -23,12 +23,10 @@ function parseYouTubeId(url) {
       return u.pathname.split("/").filter(Boolean)[0] || null;
     }
     if (u.hostname.includes("youtube.com")) {
-      // watch?v=, embed/ID, shorts/ID
       if (u.searchParams.get("v")) return u.searchParams.get("v");
       const parts = u.pathname.split("/").filter(Boolean);
       const idx = parts.findIndex(p => ["embed", "shorts", "live"].includes(p.toLowerCase()));
       if (idx >= 0 && parts[idx + 1]) return parts[idx + 1];
-      // /@channel/streams — ID yok
     }
   } catch { /* noop */ }
   return null;
@@ -37,7 +35,6 @@ function parseYouTubeId(url) {
 function youtubeThumb(id, quality = "hqdefault") {
   return `https://img.youtube.com/vi/${id}/${quality}.jpg`;
 }
-
 
 // Metadata label seçenekleri
 const LABEL_OPTIONS = [
@@ -68,36 +65,78 @@ export default function MediaModal({ open, onClose, editable = true, data = {}, 
           .map((x, i) => ({
             url: x.url ?? x.Url ?? "",
             title: x.title ?? x.Title ?? `Screenshot ${i + 1}`,
-            // metaDatas: [{label, value}]
             metaDatas: Array.isArray(x.metaDatas || x.MetaDatas) ? [...(x.metaDatas || x.MetaDatas)] : [],
           }))
-          .filter(x => x.url)
+          .filter(x => true) // yeni eklemelerde url boş olabilir
       : [];
 
     const mappedVideos = Array.isArray(data?.videos)
       ? data.videos
           .filter(Boolean)
           .map((x, i) => {
-       const url = x.url ?? x.Url ?? "";
-       const derivedId = (x.youTubeId ?? x.YouTubeId) || parseYouTubeId(url);
-       return {
-         url,
-         youTubeId: derivedId,
-         title: x.title ?? x.Title ?? `Trailer ${i + 1}`,
-         metaDatas: Array.isArray(x.metaDatas || x.MetaDatas) ? [...(x.metaDatas || x.MetaDatas)] : [],
-       };
-     })
-          .filter(x => x.url || x.youTubeId)
+            const url = x.url ?? x.Url ?? "";
+            const derivedId = (x.youTubeId ?? x.YouTubeId) || parseYouTubeId(url);
+            return {
+              url,
+              youTubeId: derivedId,
+              title: x.title ?? x.Title ?? `Trailer ${i + 1}`,
+              metaDatas: Array.isArray(x.metaDatas || x.MetaDatas) ? [...(x.metaDatas || x.MetaDatas)] : [],
+            };
+          })
+          .filter(x => true)
       : [];
 
     setShots(mappedImages);
     setVids(mappedVideos);
   }, [data, open]);
 
+  // ---- Kart ekleme (Add Image / Add Video) ----
+  const addNewImage = () => {
+    if (!editable) return;
+    setShots(prev => [
+      ...prev,
+      { url: "", title: "", metaDatas: [], _isNew: true }
+    ]);
+  };
+  const addNewVideo = () => {
+    if (!editable) return;
+    setVids(prev => [
+      ...prev,
+      { url: "", youTubeId: null, title: "", metaDatas: [], _isNew: true }
+    ]);
+  };
+
+  // --- KART SİLME (Hover X) ---
+  const removeImage = (idx) => {
+    if (!editable) return;
+    setShots(prev => prev.filter((_, i) => i !== idx));
+  };
+  const removeVideo = (idx) => {
+    if (!editable) return;
+    setVids(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  // --- Field değişimleri ---
   const handleImageTitleChange = (idx, value) => {
     setShots(prev => {
+      const next = prev.slice(); next[idx] = { ...next[idx], title: value }; return next;
+    });
+  };
+  const handleImageUrlChange = (idx, value) => {
+    setShots(prev => {
+      const next = prev.slice(); next[idx] = { ...next[idx], url: value }; return next;
+    });
+  };
+
+  const handleVideoTitleChange = (idx, value) => {
+    setVids(prev => {
+      const next = prev.slice(); next[idx] = { ...next[idx], title: value }; return next;
+    });
+  };
+  const handleVideoUrlChange = (idx, value) => {
+    setVids(prev => {
       const next = prev.slice();
-      next[idx] = { ...next[idx], title: value };
+      next[idx] = { ...next[idx], url: value, youTubeId: parseYouTubeId(value) };
       return next;
     });
   };
@@ -186,35 +225,30 @@ export default function MediaModal({ open, onClose, editable = true, data = {}, 
     });
   };
 
+  // ---- Kaydet ----
   const handleSave = () => {
     const payload = {
       images: shots.map((s, i) => ({
-        url: s.url,
+        url: (s.url ?? "").trim(),
         title: (s.title ?? "").trim() || `Screenshot ${i + 1}`,
         metaDatas: (s.metaDatas || [])
-          .filter(m => (m?.label ?? "") !== "" || (m?.value ?? "") !== "") // boş satırları at
-          .map(m => ({ label: m.label ?? "", value: m.value ?? "" })),
-      })),
-      videos: vids.map((v, i) => ({
-        url: v.youTubeId ? `https://youtu.be/${v.youTubeId}` : (v.url ?? ""),
-        title: (v.title ?? "").trim() || `Trailer ${i + 1}`,
-        youTubeId: v.youTubeId ?? null,
-        metaDatas: (v.metaDatas || [])
           .filter(m => (m?.label ?? "") !== "" || (m?.value ?? "") !== "")
           .map(m => ({ label: m.label ?? "", value: m.value ?? "" })),
-      })),
+      })).filter(x => x.url || x.title), // boş tamamen at
+      videos: vids.map((v, i) => {
+        const id = v.youTubeId || parseYouTubeId(v.url || "");
+        return {
+          url: id ? `https://youtu.be/${id}` : (v.url ?? ""),
+          title: (v.title ?? "").trim() || `Trailer ${i + 1}`,
+          youTubeId: id ?? null,
+          metaDatas: (v.metaDatas || [])
+            .filter(m => (m?.label ?? "") !== "" || (m?.value ?? "") !== "")
+            .map(m => ({ label: m.label ?? "", value: m.value ?? "" })),
+        };
+      }).filter(x => x.url || x.youTubeId || x.title),
     };
     onSave?.(payload);
-    
   };
-
-  const handleVideoTitleChange = (idx, value) => {
-  setVids(prev => {
-    const next = prev.slice();
-    next[idx] = { ...next[idx], title: value };
-    return next;
-  });
-};
 
   useEffect(() => {
     const onGlobalSave = () => {
@@ -229,15 +263,25 @@ export default function MediaModal({ open, onClose, editable = true, data = {}, 
   return (
     <BottomModal open={open} onClose={onClose}>
       <div className="gd-form is-insheet big" style={{ gap: 16 }}>
+
         {/* Header */}
-        <div className="grid" style={{ gridTemplateColumns: "1fr", gap: 12 }}>
+        <div className="grid" style={{ gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
           <div className="col header-row">
             <h3>🖼️ Gallery &amp; Videos</h3>
-            <div className="header-actions">
-              <span className="gd-sub">{shots.length + vids.length} selections</span>
-            </div>
+            <span className="gd-sub">Manage game media, screenshots, artworks, and videos</span>
           </div>
-          <span className="">Manage game media, screenshots, artworks, and videos</span>
+
+          {/* YENİ: Add butonları */}
+          {editable && (
+            <div className="header-actions flex gap-2">
+              <button type="button" className="btn gradient blue big" onClick={addNewImage}>
+                <span role="img" aria-label="camera">📷</span>&nbsp; Add Image
+              </button>
+              <button type="button" className="btn gradient pink big" onClick={addNewVideo}>
+                <span role="img" aria-label="clapper">🎬</span>&nbsp; Add Video
+              </button>
+            </div>
+          )}
         </div>
 
         {/* IMAGES */}
@@ -245,27 +289,61 @@ export default function MediaModal({ open, onClose, editable = true, data = {}, 
           {shots.map((it, i) => (
             <div className="media-card" key={`img-${i}`}>
               <div className="media-preview">
-                <img src={it.url} alt={it.title} className="media-img" />
+                {/* Hover’da sol üst kırmızı X */}
+                {editable && (
+                  <button
+                    type="button"
+                    className="kill-btn"
+                    onClick={() => removeImage(i)}
+                    aria-label="Remove image"
+                    title="Remove image"
+                  >
+                    ✕
+                  </button>
+                )}
+
+                {it.url ? (
+                  <img src={it.url} alt={it.title || "image"} className="media-img" />
+                ) : (
+                  <div className="media-img placeholder">
+                    <span className="emoji">🖼️</span>
+                    <div className="muted">No Preview</div>
+                  </div>
+                )}
                 <span className="tag purple">Image</span>
               </div>
 
               <div className="media-fields">
                 <label>Media URL</label>
-                <input type="text" value={it.url} readOnly />
+                <input
+                  type="text"
+                  value={it.url}
+                  onChange={(e) => handleImageUrlChange(i, e.target.value)}
+                  placeholder="Paste image URL"
+                  disabled={!editable}
+                />
 
                 <label>Title</label>
                 <input
                   type="text"
                   value={it.title}
                   onChange={(e) => handleImageTitleChange(i, e.target.value)}
+                  placeholder="Media title"
                   disabled={!editable}
                 />
 
                 <label className="meta-label">Metadata</label>
 
-                {/* Dinamik metadata satırları */}
+                {(it.metaDatas || []).length === 0 && (
+                  <div className="muted">No metadata</div>
+                )}
+
                 {(it.metaDatas || []).map((m, mIdx) => (
-                  <div className="meta-row" style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 10, marginBottom: 8 }} key={`img-${i}-m-${mIdx}`}>
+                  <div
+                    className="meta-row"
+                    style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 10, marginBottom: 8 }}
+                    key={`img-${i}-m-${mIdx}`}
+                  >
                     <select
                       value={m.label ?? ""}
                       onChange={(e) => changeImageMetaLabel(i, mIdx, e.target.value)}
@@ -307,53 +385,87 @@ export default function MediaModal({ open, onClose, editable = true, data = {}, 
               {vids.map((it, i) => (
                 <div className="media-card" key={`vid-${i}`}>
                   <div className="media-preview">
-                     {it.youTubeId ? (
-        <div
-          className="media-img"
-          onClick={() => window.open(`https://youtu.be/${it.youTubeId}`,"_blank")}
-          style={{ position:"relative", cursor:"pointer" }}
-          title="Open in YouTube"
-        >
-          <img
-            src={youtubeThumb(it.youTubeId)}  /* hqdefault */
-            alt={it.title}
-            className="media-img"
-            style={{ objectFit:"cover", borderRadius: 12 }}
-          />
-          {/* Play overlay */}
-          <div style={{
-            position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center"
-          }}>
-            <div style={{
-              width: 56, height: 56, borderRadius: "50%",
-              background: "rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center",
-              backdropFilter:"blur(2px)"
-            }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="white" aria-hidden>
-                <path d="M8 5v14l11-7z"></path>
-              </svg>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="media-img" style={{display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1722",borderRadius:12}}>
-          <span style={{opacity:.7}}>Video</span>
-        </div>
-      )}
-      <span className="tag purple">{it.youTubeId ? "YouTube" : "Video"}</span>
+                    {/* Hover’da sol üst kırmızı X */}
+                    {editable && (
+                      <button
+                        type="button"
+                        className="kill-btn"
+                        onClick={() => removeVideo(i)}
+                        aria-label="Remove video"
+                        title="Remove video"
+                      >
+                        ✕
+                      </button>
+                    )}
+
+                    {it.youTubeId ? (
+                      <div
+                        className="media-img"
+                        onClick={() => window.open(`https://youtu.be/${it.youTubeId}`,"_blank")}
+                        style={{ position:"relative", cursor:"pointer" }}
+                        title="Open in YouTube"
+                      >
+                        <img
+                          src={youtubeThumb(it.youTubeId)}
+                          alt={it.title || "video"}
+                          className="media-img"
+                          style={{ objectFit:"cover", borderRadius: 12 }}
+                        />
+                        {/* Play overlay */}
+                        <div style={{
+                          position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center"
+                        }}>
+                          <div style={{
+                            width: 56, height: 56, borderRadius: "50%",
+                            background: "rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center",
+                            backdropFilter:"blur(2px)"
+                          }}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="white" aria-hidden>
+                              <path d="M8 5v14l11-7z"></path>
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="media-img placeholder">
+                        <span className="emoji">🎬</span>
+                        <div className="muted">No Preview</div>
+                      </div>
+                    )}
+                    <span className="tag purple">{it.youTubeId ? "YouTube" : "Video"}</span>
                   </div>
 
                   <div className="media-fields">
-                    <label>Video URL</label>
-                    <input type="text" value={it.url} readOnly />
+                    <label>Media URL</label>
+                    <input
+                      type="text"
+                      value={it.url}
+                      onChange={(e) => handleVideoUrlChange(i, e.target.value)}
+                      placeholder="Paste YouTube link"
+                      disabled={!editable}
+                    />
 
                     <label>Title</label>
-                    <input type="text" value={it.title} onChange={(e) => handleVideoTitleChange(i, e.target.value)} disabled={!editable} />
+                    <input
+                      type="text"
+                      value={it.title}
+                      onChange={(e) => handleVideoTitleChange(i, e.target.value)}
+                      placeholder="Media title"
+                      disabled={!editable}
+                    />
 
                     <label className="meta-label">Metadata</label>
 
+                    {(it.metaDatas || []).length === 0 && (
+                      <div className="muted">No metadata</div>
+                    )}
+
                     {(it.metaDatas || []).map((m, mIdx) => (
-                      <div className="meta-row" style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 10, marginBottom: 8 }} key={`vid-${i}-m-${mIdx}`}>
+                      <div
+                        className="meta-row"
+                        style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 10, marginBottom: 8 }}
+                        key={`vid-${i}-m-${mIdx}`}
+                      >
                         <select
                           value={m.label ?? ""}
                           onChange={(e) => changeVideoMetaLabel(i, mIdx, e.target.value)}
@@ -385,9 +497,6 @@ export default function MediaModal({ open, onClose, editable = true, data = {}, 
             </div>
           </>
         )}
-
-        
-       
       </div>
     </BottomModal>
   );
