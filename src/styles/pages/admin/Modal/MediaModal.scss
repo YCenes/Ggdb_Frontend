@@ -86,3 +86,47 @@
 .media-card:hover .kill-btn{ opacity:1; transform:scale(1); pointer-events:auto; }
 .media-card .kill-btn:hover{ filter:brightness(.95); }
 
+
+.media-card {
+  .media-preview {
+    position: relative; // <-- önemli: butonun absolute konumlanması için
+
+    .kill-btn {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      background: #ff4d4f;
+      color: #fff;
+      line-height: 28px;
+      text-align: center;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+
+      z-index: 9;        // <-- overlay'in üstüne çıkar
+      opacity: 0;
+      transform: translateY(-2px);
+      transition: opacity .15s ease, transform .15s ease;
+    }
+
+    &:hover .kill-btn {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .media-img {
+      display: block;
+      width: 100%;
+      height: 200px;     // senin yüksekliğine göre
+      object-fit: cover;
+      border-radius: 12px;
+    }
+  }
+}
+
+/* credits özeline ufak dokunuş (opsiyonel) */
+.bm-sheet.full .gd-form.big h4 { color: var(--cyan, #76e4f7); }
+.bm-sheet.full .gd-form.big label { color: var(--muted, #9aa4b2); }

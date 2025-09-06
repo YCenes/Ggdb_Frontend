@@ -8,7 +8,47 @@ import SystemModal from "./Modals/SystemModal";
 import LanguagesModal from "./Modals/LanguagesModal";
 import StoreLinksModal from "./Modals/StoreLinksModal";
 import MediaModal from "./Modals/MediaModal";
+import CreditsModal from "./Modals/CreditsModal";
+import BannerMediaModal from "./Modals/BannerMediaModal";
 import { getGameById, updateGameById } from "../../services/admin.api";
+
+const parseYouTubeId = (u) => {
+  if (!u) return null;
+  try {
+    const url = new URL(u);
+    const host = url.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") return url.pathname.slice(1);
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      if (url.pathname === "/watch") return url.searchParams.get("v");
+      if (url.pathname.startsWith("/shorts/")) return url.pathname.split("/")[2];
+      if (url.pathname.startsWith("/embed/"))  return url.pathname.split("/")[2];
+    }
+  } catch {}
+  return null;
+};
+
+// Seçilmiş (tekil) görsel/video alanlarını tek tipe indir
+const normalizeSelectedImage = (x) =>
+  !x ? null : ({
+    url: x.url ?? x.URL ?? null,
+    title: x.title ?? x.Title ?? "Image",
+    metaDatas: x.metaDatas ?? x.MetaDatas ?? [],
+  });
+
+const normalizeSelectedVideo = (x) =>
+  !x ? null : ({
+    url: x.url ?? x.URL ?? null,
+    title: x.title ?? x.Title ?? "Trailer",
+    youTubeId: x.youTubeId ?? x.YouTubeId ?? parseYouTubeId(x.url ?? x.URL ?? ""),
+    metaDatas: x.metaDatas ?? x.MetaDatas ?? [],
+  });
+
+// DTO’ya gidecek obje üreticileri (küçük harf alan adları!)
+const toImgDto = (url, title) =>
+  url ? ({ url, title: title || "Image", metaDatas: [] }) : null;
+
+const toVidDto = (url, title) =>
+  url ? ({ url, title: title || "Trailer", youTubeId: parseYouTubeId(url), metaDatas: [] }) : null;
 
 function normalizeGallery(dto) {
   const g =
@@ -90,6 +130,8 @@ export default function GameDetailAdmin() {
   const [openLanguages, setOpenLanguages] = useState(false);
   const [openStores, setOpenStores] = useState(false);
   const [openMedia, setOpenMedia] = useState(false);
+  const [openCredits, setOpenCredits] = useState(false);
+  const [openBanner, setOpenBanner] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
@@ -129,6 +171,17 @@ export default function GameDetailAdmin() {
         timeToBeat_Hastily: dto.timeToBeat_Hastily ?? dto.TimeToBeat_Hastily ?? null,
         timeToBeat_Normally: dto.timeToBeat_Normally ?? dto.TimeToBeat_Normally ?? null, 
         timeToBeat_Completely: dto.timeToBeat_Completely ?? dto.TimeToBeat_Completely ?? null,
+        gameDirector: dto.gameDirector ?? dto.GameDirector ?? "",
+        writers: dto.writers ?? dto.Writers ?? [],
+        artDirector: dto.artDirector ?? dto.ArtDirector ?? "",
+        leadActors: dto.leadActors ?? dto.LeadActors ?? [],
+        voiceActors: dto.voiceActors ?? dto.VoiceActors ?? [],
+        musicComposer: dto.musicComposer ?? dto.MusicComposer ?? "",
+        cinematicsVfxTeam: dto.cinematicsVfxTeam ?? dto.CinematicsVfxTeam ?? [],
+        Featured_Section_Background: normalizeSelectedImage(dto.featured_Section_Background ?? dto.Featured_Section_Background),
+        Poster_Image: normalizeSelectedImage(dto.poster_Image ?? dto.Poster_Image),
+        Poster_Video: normalizeSelectedVideo(dto.poster_Video ?? dto.Poster_Video),
+       
       };
 
       if (alive) setGame(viewModel);
@@ -149,6 +202,16 @@ export default function GameDetailAdmin() {
       if (!game) return;
       const id = routeId || game.id;
       const merged = { ...game, ...partialDraft };
+
+      // draft string URL gönderebilir → objeye çevir
+     const toImgObj = (url, title) =>
+       url ? { URL: url, Title: title, MetaDatas: [] } : null;
+     const toVidObj = (url, title) =>
+       url ? { URL: url, Title: title, MetaDatas: [] } : null;
+
+     const byUrl = (url) =>
+      (merged.images || []).find(i => (i.url ?? i.URL) === url) ||
+      (url ? { url, title: "", metaDatas: [] } : null);
 
       const dto = {
         id,
@@ -192,7 +255,32 @@ export default function GameDetailAdmin() {
         timeToBeat_Hastily:    merged.timeToBeat_Hastily    !== "" && merged.timeToBeat_Hastily    != null ? Number(merged.timeToBeat_Hastily)    : null,
         timeToBeat_Normally:   merged.timeToBeat_Normally   !== "" && merged.timeToBeat_Normally   != null ? Number(merged.timeToBeat_Normally)   : null,
         timeToBeat_Completely: merged.timeToBeat_Completely !== "" && merged.timeToBeat_Completely != null ? Number(merged.timeToBeat_Completely) : null,
+        
+        gameDirector: merged.gameDirector ?? "",
+        writers: Array.isArray(merged.writers) ? merged.writers : [],
+        artDirector: merged.artDirector ?? "",
+        leadActors: Array.isArray(merged.leadActors) ? merged.leadActors : [],
+        voiceActors: Array.isArray(merged.voiceActors) ? merged.voiceActors : [],
+        musicComposer: merged.musicComposer ?? "",
+        cinematicsVfxTeam: Array.isArray(merged.cinematicsVfxTeam) ? merged.cinematicsVfxTeam : [],
 
+        Featured_Section_Background: 
+        (Object.prototype.hasOwnProperty.call(partialDraft, "featuredImageObj") || 
+         Object.prototype.hasOwnProperty.call(partialDraft, "featuredBackground"))
+          ? (partialDraft.featuredImageObj || byUrl(partialDraft.featuredBackground) || null)
+          : (merged.Featured_Section_Background ?? null),
+
+      Poster_Image:
+        (Object.prototype.hasOwnProperty.call(partialDraft, "posterImageObj") || 
+         Object.prototype.hasOwnProperty.call(partialDraft, "posterImage"))
+          ? (partialDraft.posterImageObj || byUrl(partialDraft.posterImage) || null)
+          : (merged.Poster_Image ?? null),
+
+      Poster_Video:
+        (Object.prototype.hasOwnProperty.call(partialDraft, "trailerVideoObj") || 
+         Object.prototype.hasOwnProperty.call(partialDraft, "trailerVideo"))
+          ? (partialDraft.trailerVideoObj || (partialDraft.trailerVideo ? { url: partialDraft.trailerVideo, title: "Trailer 1", metaDatas: [] } : null))
+          : (merged.Poster_Video ?? null),
         
       };
 
@@ -200,7 +288,12 @@ export default function GameDetailAdmin() {
         setSaving(true);
         setError(null);
         await updateGameById(id, dto);
-        setGame(merged); // optimistic
+        setGame({
+         ...merged,
+         Featured_Section_Background: dto.Featured_Section_Background,
+        Poster_Image: dto.Poster_Image,
+        Poster_Video: dto.Poster_Video,
+       });
         setIsEditing(false);
       } catch (err) {
         setError(err?.response?.data?.message || err?.message || "Save failed");
@@ -245,10 +338,10 @@ export default function GameDetailAdmin() {
     { key: "languages", label: "Languages", open: () => setOpenLanguages(true) },
     { key: "stores", label: "Store Links", open: () => setOpenStores(true) },
     { key: "media", label: "Media", open: () => setOpenMedia(true) },
-    { key: "credits", label: "Credits" },
+    { key: "credits", label: "Credits", open: () => setOpenCredits(true) },
     { key: "review", label: "Review" },
     { key: "trivia", label: "Trivia" },
-    { key: "banner", label: "Banner / Trailer" },
+    { key: "banner", label: "Banner / Trailer", open: () => setOpenBanner(true) },
   ];
 
   return (
@@ -317,6 +410,8 @@ export default function GameDetailAdmin() {
                     setOpenLanguages(false);
                     setOpenStores(false);
                     setOpenMedia(false);
+                    setOpenCredits(false);
+                    setOpenBanner(false);
                     break;
                   case "awards":
                     setOpenAwards(true);
@@ -326,6 +421,8 @@ export default function GameDetailAdmin() {
                     setOpenLanguages(false);
                     setOpenStores(false);
                     setOpenMedia(false);
+                    setOpenCredits(false);
+                    setOpenBanner(false);
                     break;
                   case "system":
                     setOpenSystem(true);
@@ -335,6 +432,8 @@ export default function GameDetailAdmin() {
                     setOpenLanguages(false);
                     setOpenStores(false);
                     setOpenMedia(false);
+                    setOpenCredits(false);
+                    setOpenBanner(false);
                     break;
                   case "languages":
                     setOpenLanguages(true);
@@ -344,6 +443,8 @@ export default function GameDetailAdmin() {
                     setOpenAwards(false);
                     setOpenStores(false);
                     setOpenMedia(false);
+                    setOpenCredits(false);
+                    setOpenBanner(false);
                     break;
                   case "stores":
                     setOpenStores(true);
@@ -353,6 +454,8 @@ export default function GameDetailAdmin() {
                     setOpenSystem(false);
                     setOpenLanguages(false);
                     setOpenMedia(false);
+                    setOpenCredits(false);
+                    setOpenBanner(false);
                     break;
                   case "media":
                     setOpenMedia(true);
@@ -362,6 +465,31 @@ export default function GameDetailAdmin() {
                     setOpenSystem(false);
                     setOpenLanguages(false);
                     setOpenStores(false);
+                    setOpenCredits(false);
+                    setOpenBanner(false);
+                    break;
+
+                  case "credits":
+                    setOpenCredits(true);
+                    setOpenOverview(false);
+                    setOpenCreative(false);
+                    setOpenAwards(false);
+                    setOpenSystem(false);
+                    setOpenLanguages(false);
+                    setOpenStores(false);
+                    setOpenMedia(false);
+                    setOpenBanner(false);
+                    break;
+                  case "banner":
+                    setOpenBanner(true);
+                    setOpenOverview(false);
+                    setOpenCreative(false);
+                    setOpenAwards(false);
+                    setOpenSystem(false);
+                    setOpenLanguages(false);
+                    setOpenStores(false);
+                    setOpenMedia(false);
+                    setOpenCredits(false);
                     break;
                   default:
                     setOpenOverview(true);
@@ -371,6 +499,8 @@ export default function GameDetailAdmin() {
                     setOpenLanguages(false);
                     setOpenStores(false);
                     setOpenMedia(false);
+                    setOpenCredits(false);
+                    setOpenBanner(false);
                     break;
                 }
                 setIsEditing(true);
@@ -390,6 +520,10 @@ export default function GameDetailAdmin() {
                   ? "Store Links"
                   : activeTab === "media"
                   ? "Media"
+                  : activeTab === "credits"
+                  ? "Credits"
+                  : activeTab === "banner"
+                  ? "Banner"
                   : "Overview"
               }`}
             </button>
@@ -410,6 +544,10 @@ export default function GameDetailAdmin() {
                     ? "ggdb:stores-save-request"
                     : activeTab === "media"
                     ? "ggdb:media-save-request"
+                    : activeTab === "credits"
+                    ? "ggdb:credits-save-request"
+                    : activeTab === "banner"
+                    ? "ggdb:banner-save-request"
                     : "ggdb:overview-save-request";
                 window.dispatchEvent(new CustomEvent(evName));
                 setIsEditing(false);
@@ -438,6 +576,8 @@ export default function GameDetailAdmin() {
               setOpenLanguages(false);
               setOpenStores(false);
               setOpenMedia(false);
+              setOpenCredits(false);
+              setOpenBanner(false);
 
               if (t.open) t.open();
               setIsEditing(false);
@@ -456,6 +596,20 @@ export default function GameDetailAdmin() {
       <LanguagesModal open={openLanguages} onClose={() => setOpenLanguages(false)} editable={isEditing} data={game} onSave={handlePersist} />
       <StoreLinksModal open={openStores} onClose={() => setOpenStores(false)} editable={isEditing} data={game} onSave={handlePersist} />
       <MediaModal open={openMedia} onClose={() => setOpenMedia(false)} editable={isEditing} data={game} onSave={handlePersist} />
+      <CreditsModal
+        open={openCredits}
+        onClose={() => setOpenCredits(false)}
+        editable={isEditing}
+        data={game}
+        onSave={handlePersist}
+      />
+      <BannerMediaModal
+  open={openBanner}
+  onClose={() => setOpenBanner(false)}
+  editable={isEditing}
+  data={game}
+  onSave={handlePersist}
+/>
     </div>
   );
 }
