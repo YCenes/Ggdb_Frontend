@@ -59,7 +59,7 @@ export default function Sidebar({ open, setOpen, mobileOpen, setMobileOpen }) {
             <Item icon={Users}   label="Manage Users"     to="/admin/users"          onClick={() => setMobileOpen(false)} />
             <Item icon={BarChart3}label="Analytics"       to="/admin/analytics"      onClick={() => setMobileOpen(false)} />
             <Item icon={Settings}label="Settings"         to="/admin/settings"       onClick={() => setMobileOpen(false)} />
-            <Item icon={ServerCog}label="System Logs"     to="/admin/system-logs"    onClick={() => setMobileOpen(false)} />
+            <Item icon={ServerCog}label="System Logs"     to="/admin/logs"    onClick={() => setMobileOpen(false)} />
             <Item icon={Bug}     label="Error Logs"       to="/admin/error-logs"     onClick={() => setMobileOpen(false)} />
           </nav>
 

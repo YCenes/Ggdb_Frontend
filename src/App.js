@@ -24,6 +24,8 @@ import "./styles/main.scss";
 import ManageGame from "./pages/Admin/ManageGame.js";
 import GameDetailAdmin from "./pages/Admin/AdminDetails.js";
 import ManageUsers from "./pages/Admin/ManageUsers.js";
+import SystemLogs from "./pages/Admin/SystemLogs.js";
+
 
 function App() {
   return (
@@ -52,6 +54,7 @@ function App() {
              <Route path="games" element={<ManageGame />} />
              <Route path="game/:id" element={<GameDetailAdmin />} />
              <Route path="users" element={<ManageUsers />} />
+             <Route path="logs" element={<SystemLogs />} />
           </Route>
 
           {/* 404 */}

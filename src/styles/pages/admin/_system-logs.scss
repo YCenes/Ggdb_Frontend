@@ -1,0 +1,52 @@
+.syslogs {
+  --bg: #0b0f17; --panel:#0f131b; --line:#1f2633; --text:#e5e7eb; --muted:#9aa4b2;
+  color: var(--text);
+
+  .head {
+    display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:16px;
+    .title { font-size:28px; font-weight:800; }
+    .actions { display:flex; gap:8px;
+      .btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 12px; border-radius:10px; border:1px solid #2b3242; background:#131826;
+        &.primary { background:#f0b90b; color:#111; border-color:#f0b90b; font-weight:700; }
+        &.ghost { background:#131826; }
+      }
+    }
+  }
+
+  .toolbar {
+    display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap;
+    .search { flex:1; display:flex; align-items:center; gap:8px; background:#0f131b; border:1px solid #293142; border-radius:14px; height:44px; padding:0 12px;
+      input { flex:1; background:transparent; color:var(--text); border:0; outline:0; }
+    }
+    select { height:44px; background:#0f131b; color:var(--text); border:1px solid #293142; border-radius:14px; padding:0 12px; }
+  }
+
+  .table-wrap { background:#0f131b; border:1px solid #293142; border-radius:16px; overflow:hidden; }
+  table.logs { width:100%; border-collapse:separate; border-spacing:0;
+    th, td { padding:14px 16px; border-bottom:1px solid #1d2432; text-align:left; }
+    thead th { background:#0d121d; color:#c7d0dd; font-weight:700; }
+    tbody tr:hover { background:#101624; }
+    td.msg { color:#d9dde6; }
+    td.user { color:#a0abc0; }
+    td.loading, td.empty { text-align:center; color:var(--muted); }
+  }
+
+  .pager { display:flex; justify-content:space-between; align-items:center; margin-top:12px; color:#a6b0c3;
+    .pg-buttons { display:flex; gap:8px;
+      button { height:32px; padding:0 10px; border-radius:10px; border:1px solid #293142; background:#0f131b; color:#cbd5e1;
+        &:disabled { opacity:.5; cursor:not-allowed; }
+      }
+    }
+  }
+
+  .lv { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-weight:600;
+    &.lv-error { background:#2a1417; color:#ff898f; border:1px solid #5a1d23; }
+    &.lv-warning { background:#2a2314; color:#ffd38a; border:1px solid #5a4a1d; }
+    &.lv-info { background:#131f2a; color:#8cc8ff; border:1px solid #1e3d5a; }
+    &.lv-success { background:#142a1c; color:#8dffb2; border:1px solid #1d5a35; }
+    span { line-height:1; }
+  }
+  .cat { display:inline-flex; align-items:center; gap:6px; background:#161b27; border:1px solid #283045; color:#c9d3e6; padding:4px 8px; border-radius:10px;
+    .i { opacity:.9; }
+  }
+}
