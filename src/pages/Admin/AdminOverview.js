@@ -2,6 +2,7 @@ import React from "react";
 import "../../styles/admin/AdminOverview.scss";
 import { useKpis } from "../../hooks/useKpis.js";
 import { useGrowth } from "../../hooks/useGrowth.js";
+import { useHealth } from "../../hooks/useHealth.js";
 import LineChart from "../../components/charts/LineChart.js";
 import PieChart from "../../components/charts/PieChart.js";
 
@@ -12,13 +13,10 @@ const ArrowUp = () => (
 );
 
 export default function AdminOverview() {
-  // KPI'lar
- const { kpis, loading } = useKpis({ windowDays: 7 });
-
-  // Growth (backend'ten)
+  const { kpis } = useKpis({ windowDays: 7 });
   const { series, dims } = useGrowth({ days: 7, mode: "cumulative" });
+  const { items: healthItems, loading: healthLoading, error: healthError } = useHealth({ refreshMs: 0 });
 
-  // Pie verisi (statik örnek)
   const pieData = [
     { label: "Registrations", value: 25, color: "var(--blue)" },
     { label: "Game Submissions", value: 20, color: "var(--green)" },
@@ -26,20 +24,19 @@ export default function AdminOverview() {
     { label: "Other", value: 5, color: "var(--purple)" },
     { label: "Reports", value: 15, color: "var(--red)" },
   ];
-  const pieStyle = { "--blue": "#4361ee", "--green": "#06d6a0", "--orange": "#ffb74d", "--purple": "#9d4edd", "--red": "#ef476f" };
+  const pieStyle = {
+    "--blue": "#4361ee",
+    "--green": "#06d6a0",
+    "--orange": "#ffb74d",
+    "--purple": "#9d4edd",
+    "--red": "#ef476f",
+  };
 
   const recent = [
     { type: "danger", text: "Banned user @spammer123 for violations", time: "2 minutes ago" },
     { type: "warn", text: 'Approved game "Cyberpunk Adventure"', time: "15 minutes ago" },
     { type: "danger", text: "API response time threshold exceeded", time: "1 hour ago" },
     { type: "ok", text: "Verified 12 new user accounts", time: "2 hours ago" },
-  ];
-
-  const health = [
-    { title: "Server", status: "Healthy", color: "#22C55E" },
-    { title: "Database", status: "Healthy", color: "#22C55E" },
-    { title: "Cdn", status: "Healthy", color: "#22C55E" },
-    { title: "Apis", status: "Healthy", color: "#22C55E" },
   ];
 
   return (
@@ -65,12 +62,13 @@ export default function AdminOverview() {
         ))}
       </section>
 
+      {/* Charts */}
       <section className="grid-2">
         <LineChart title="Platform Growth" series={series} dims={dims} />
         <PieChart data={pieData} style={pieStyle} />
       </section>
 
-      {/* Actions */}
+      {/* Recent Admin Actions */}
       <section className="card actions">
         <div className="card-title"><span className="title-ico">🕒</span> Recent Admin Actions</div>
         <ul className="action-list">
@@ -88,13 +86,40 @@ export default function AdminOverview() {
         <button className="view-all">View all activity</button>
       </section>
 
-      {/* Health */}
+      {/* Health (dynamic) */}
       <section className="health-grid">
-        {health.map((h, i) => (
-          <div key={i} className="card health">
+        {healthLoading && (
+          <>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="card health skeleton">
+                <div className="head">Loading…</div>
+                <div className="foot">
+                  <span className="state">—</span>
+                  <span className="lamp" />
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {!healthLoading && healthError && (
+          <div className="card health error">
+            <div className="head">Health</div>
+            <div className="foot">
+              <span className="state">Error</span>
+              <span className="lamp" style={{ backgroundColor: "#EF4444" }} />
+            </div>
+            <div className="err-text">{healthError}</div>
+          </div>
+        )}
+
+        {!healthLoading && !healthError && healthItems.map((h, i) => (
+          <div key={i} className="card health" title={h.detail || undefined}>
             <div className="head">{h.title}</div>
             <div className="foot">
-              <span className="state">{h.status}</span>
+              <span className="state">
+                {h.status}{h.latencyMs != null ? ` • ${h.latencyMs}ms` : ""}
+              </span>
               <span className="lamp" style={{ backgroundColor: h.color }} />
             </div>
           </div>
