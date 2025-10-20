@@ -1,6 +1,18 @@
 // src/pages/admin/modals/BannerMediaModal.jsx
 import React, { useEffect, useMemo, useState } from "react";
 
+function BottomModal({ open, onClose, children }) {
+  if (!open) return null;
+  return (
+    <div className="bm-wrap" role="dialog" aria-modal="true">
+      <div className="bm-backdrop" onClick={onClose} />
+      <div className="bm-sheet full">
+        <div className="bm-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 /** ---- Helpers ---- */
 const hiRes = (u) => {
   if (!u) return u;
@@ -149,6 +161,9 @@ function GalleryPickerModal({ show, title, items, mode, onPick, onClose }) {
 }
 
 export default function BannerMediaModal({ open, onClose, editable, data, onSave }) {
+
+  
+
   // Bilgi amaçlı listeler (render/grid için)
   const availableImages = data?.images || [];
   const availableVideos = data?.videos || [];
@@ -233,6 +248,7 @@ export default function BannerMediaModal({ open, onClose, editable, data, onSave
   return (
     <>
       {/* Ana modalın kendisi hâlihazırda projectte özel bir bottom sheet ise – bunu koruyoruz */}
+      <BottomModal open={open} onClose={onClose}>
       <div className="banner-media-container">
         {/* Header */}
         <div className="d-flex align-items-center gap-2 px-4 pt-4 mb-4">
@@ -364,6 +380,7 @@ export default function BannerMediaModal({ open, onClose, editable, data, onSave
         onPick={handlePick}
         onClose={closePicker}
       />
+      </BottomModal>
 
       {/* small local styles used by this component */}
       <style>{`

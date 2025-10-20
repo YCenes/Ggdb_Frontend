@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Ban, Trash2, Search, User } from "lucide-react";
-import { getUsers, deleteUser as apiDeleteUser, updateUserRole } from "../../services/admin.api";
+import { getUsers, deleteUser as apiDeleteUser, updateUserRole, setUserBan } from "../../services/admin.api";
 import "../../styles/pages/admin/_manage-users.scss";
 import Flag from "../../components/Flag";
 
@@ -101,6 +101,7 @@ export default function ManageUsersBootstrap() {
           }
           const birthdate = u.birthdate ?? u.Birthdate ?? null;
           const profileImageUrl = u.profileImageUrl ?? u.ProfileImageUrl ?? null;
+          const isBanned = !!(u.isBanned ?? u.IsBanned ?? false);
 
           // ülke
   const countryName = u.country ?? u.Country ?? "Türkiye";
@@ -126,6 +127,7 @@ export default function ManageUsersBootstrap() {
     },
             plan: "Free",
             profileImage: profileImageUrl,
+            isBanned,
           };
         });
         setUsers(mapped);
@@ -138,7 +140,7 @@ export default function ManageUsersBootstrap() {
 
   // Filters
   const filtered = useMemo(() => {
-    let list = users.filter(() => tab === "active"); // demo
+    let list = users.filter(u => tab === "active" ? !u.isBanned : u.isBanned);
     if (q) {
       const s = q.toLowerCase();
       list = list.filter(
@@ -214,6 +216,28 @@ export default function ManageUsersBootstrap() {
  };
 
  
+const handleToggleBan = async (user) => {
+  const next = !user.isBanned;
+  // Onay sor
+  const ok = window.confirm(
+    next
+      ? `${user.username} kullanıcısını banlamak istiyor musun?`
+      : `${user.username} kullanıcısının banını kaldırmak istiyor musun?`
+  );
+  if (!ok) return;
+
+  // optimistic update
+  setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isBanned: next } : u));
+  try {
+    await setUserBan(user.id, next);
+    // başarı → UI zaten güncel
+  } catch (err) {
+    console.error("setUserBan error:", err);
+    alert("İşlem başarısız oldu.");
+    // rollback
+    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isBanned: !next } : u));
+  }
+};
 
 
 
@@ -249,7 +273,7 @@ export default function ManageUsersBootstrap() {
             onClick={() => setTab("banned")}
           >
             <span className="me-1">⛔</span> Banned / Deleted
-            <span className="badge rounded-pill bg-danger ms-2">4</span>
+            <span className="badge rounded-pill bg-danger ms-2">{users.filter(u => u.isBanned).length}</span>
           </button>
         </div>
 
@@ -314,7 +338,7 @@ export default function ManageUsersBootstrap() {
               </thead>
               <tbody>
                 {pageItems.map((u) => (
-                  <tr key={u.id} className="row-hover">
+                  <tr key={u.id} className={`row-hover ${u.isBanned ? "is-banned" : ""}`}>
                     {/* Username */}
                     <td>
                       <div className="d-flex align-items-center">
@@ -375,9 +399,13 @@ export default function ManageUsersBootstrap() {
                         <button className="btn btn-sm btn-icon btn-view" title="View">
                           <Eye size={16} />
                         </button>
-                        <button className="btn btn-sm btn-icon btn-warn" title="Ban">
-                          <Ban size={16} />
-                        </button>
+                        <button
+                        className={`btn btn-sm btn-icon ${u.isBanned ? "btn-success" : "btn-warn"}`}
+                        title={u.isBanned ? "Unban" : "Ban"}
+                        onClick={() => handleToggleBan(u)}
+                      >
+                        <Ban size={16} />
+                      </button>
                         <button
                         className="btn btn-sm btn-outline-danger icon-btn"
                         title="Delete"

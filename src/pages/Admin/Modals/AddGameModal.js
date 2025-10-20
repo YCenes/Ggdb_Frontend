@@ -1,30 +1,21 @@
 import React, { useState } from "react";
 import API from "../../../services/api.js";
+import "bootstrap/dist/css/bootstrap.min.css";
 
-/**
- * AddGameModal
- *  - Mode "auto": Single search → strict pair IGDB+RAWG → Preview → Commit
- *  - Mode "manual": Full form → Commit as MergedGameDto (tüm alanlar, Createdat YOK)
- *
- * Props:
- *  - open: boolean
- *  - onClose: () => void
- *  - onAdded: (newGameMinimal) => void
- */
 export default function AddGameModal({ open, onClose, onAdded }) {
-  const [mode, setMode] = useState("auto"); // "auto" | "manual"
+  const [mode, setMode] = useState("auto");
 
-  // ====== AUTO (strict) state ======
+  // ====== AUTO state ======
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState([]); // [{label, igdbId, rawgId, score}]
+  const [results, setResults] = useState([]);
   const [picked, setPicked] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [merged, setMerged] = useState(null);
 
-  // ====== MANUAL state (DTO'daki tüm alanlar; Createdat hariç) ======
+  // ====== MANUAL state ======
   const [mName, setMName] = useState("");
-  const [mRelease, setMRelease] = useState(""); // yyyy-mm-dd veya ISO
+  const [mRelease, setMRelease] = useState("");
   const [mCover, setMCover] = useState("");
   const [mDeveloper, setMDeveloper] = useState("");
   const [mPublisher, setMPublisher] = useState("");
@@ -57,74 +48,69 @@ export default function AddGameModal({ open, onClose, onAdded }) {
   const [mCast, setMCast] = useState("");
   const [mCrew, setMCrew] = useState("");
 
-  // TimeToBeat
-  const [mTtbH, setMTtbH] = useState(""); // Hastily
-  const [mTtbN, setMTtbN] = useState(""); // Normally
-  const [mTtbC, setMTtbC] = useState(""); // Completely
+  const [mTtbH, setMTtbH] = useState("");
+  const [mTtbN, setMTtbN] = useState("");
+  const [mTtbC, setMTtbC] = useState("");
 
-  // StoreLinks: her satır "Name | URL"
   const [mStoreLinks, setMStoreLinks] = useState("");
 
   const [mScreenshots, setMScreenshots] = useState("");
   const [mTrailers, setMTrailers] = useState("");
-
 
   const [manualSaving, setManualSaving] = useState(false);
   const [manualError, setManualError] = useState(null);
 
   if (!open) return null;
 
-  // ---------- utils ----------
+  // ---------- utils (aynı) ----------
   const normalize = (s) =>
-  (s || "")
-    .toLowerCase()
-    .replace(/[™®©]/g, "")
-    .replace(/\[(.*?)]/g, " ")
-    .replace(/[:\-–_|]/g, " ")
-    .replace(/\b(remaster(ed)?|remake|definitive|complete|deluxe|ultimate|goty|hd|edition|bundle|pack)\b/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+    (s || "")
+      .toLowerCase()
+      .replace(/[™®©]/g, "")
+      .replace(/\[(.*?)]/g, " ")
+      .replace(/[:\-–_|]/g, " ")
+      .replace(/\b(remaster(ed)?|remake|definitive|complete|deluxe|ultimate|goty|hd|edition|bundle|pack)\b/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
 
-  const titleSim = (a,b) => {
-  const A = normalize(a), B = normalize(b);
-  if (!A || !B) return 0;
-  if (A === B) return 1;
-  if (A.includes(B) || B.includes(A)) return 0.96;
-  const d = lev(A, B); // sizde var
-  const maxLen = Math.max(A.length, B.length);
-  return 1 - d / Math.max(1, maxLen);
-};
-const jaccard = (a = [], b = []) => {
-  const A = new Set(a.map(s => s.toLowerCase()));
-  const B = new Set(b.map(s => s.toLowerCase()));
-  const inter = [...A].filter(x => B.has(x)).length;
-  const union = new Set([...A, ...B]).size || 1;
-  return inter / union;
-};
+  const titleSim = (a, b) => {
+    const A = normalize(a), B = normalize(b);
+    if (!A || !B) return 0;
+    if (A === B) return 1;
+    if (A.includes(B) || B.includes(A)) return 0.96;
+    const d = lev(A, B);
+    const maxLen = Math.max(A.length, B.length);
+    return 1 - d / Math.max(1, maxLen);
+  };
+  const jaccard = (a = [], b = []) => {
+    const A = new Set(a.map(s => s.toLowerCase()));
+    const B = new Set(b.map(s => s.toLowerCase()));
+    const inter = [...A].filter(x => B.has(x)).length;
+    const union = new Set([...A, ...B]).size || 1;
+    return inter / union;
+  };
 
-const yearClose = (ya, yb) => (ya == null || yb == null) ? true : Math.abs(ya - yb) <= 1;
-const slugEqual = (a,b) => !!a && !!b && normalize(a) === normalize(b);
+  const yearClose = (ya, yb) => (ya == null || yb == null) ? true : Math.abs(ya - yb) <= 1;
+  const slugEqual = (a, b) => !!a && !!b && normalize(a) === normalize(b);
 
-const pairScore = (g, r) => {
-  let s = similarity(g.name, r.name);               // 0..1
-  if (g.year && r.year && Math.abs(g.year - r.year) <= 1) s += 0.03;
-  if (g.platforms?.length && r.platforms?.length)   s += 0.02 * jaccard(g.platforms, r.platforms);
-  return Math.min(1, s);
-};
+  const pairScore = (g, r) => {
+    let s = similarity(g.name, r.name);
+    if (g.year && r.year && Math.abs(g.year - r.year) <= 1) s += 0.03;
+    if (g.platforms?.length && r.platforms?.length) s += 0.02 * jaccard(g.platforms, r.platforms);
+    return Math.min(1, s);
+  };
 
-// güçlü eşleşme koşulu
-// Güçlü eşleşme kriteri
-const isStrongMatch = (g, r, s) => {
-  const nameEq = normalize(g.name) === normalize(r.name);
-  const yearOk = (!g.year || !r.year) || Math.abs(g.year - r.year) <= 1;
-  return (s >= 0.94 && yearOk) || (nameEq && s >= 0.90);
-};
+  const isStrongMatch = (g, r, s) => {
+    const nameEq = normalize(g.name) === normalize(r.name);
+    const yearOk = (!g.year || !r.year) || Math.abs(g.year - r.year) <= 1;
+    return (s >= 0.94 && yearOk) || (nameEq && s >= 0.90);
+  };
 
-const dedupeByKey = (arr, keyFn) => {
-  const seen = new Set(); const out = [];
-  for (const x of arr) { const k = keyFn(x); if (seen.has(k)) continue; seen.add(k); out.push(x); }
-  return out;
-};
+  const dedupeByKey = (arr, keyFn) => {
+    const seen = new Set(); const out = [];
+    for (const x of arr) { const k = keyFn(x); if (seen.has(k)) continue; seen.add(k); out.push(x); }
+    return out;
+  };
 
   const lev = (a, b) => {
     a = a || ""; b = b || "";
@@ -154,19 +140,9 @@ const dedupeByKey = (arr, keyFn) => {
     return 1 - d / Math.max(1, maxLen);
   };
 
-  const parseCsv = (s) =>
-    (s || "")
-      .split(",")
-      .map(x => x.trim())
-      .filter(Boolean);
-
+  const parseCsv = (s) => (s || "").split(",").map(x => x.trim()).filter(Boolean);
   const parseYear = (y) => (Number.isFinite(+y) ? +y : null);
-
-  const parseLines = (s) =>
-    (s || "")
-      .split(/\r?\n/)
-      .map(x => x.trim())
-      .filter(Boolean);
+  const parseLines = (s) => (s || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean);
 
   const toIntOrNull = (v) => {
     if (v === null || v === undefined || v === "") return null;
@@ -174,7 +150,6 @@ const dedupeByKey = (arr, keyFn) => {
     return Number.isFinite(n) ? Math.trunc(n) : null;
   };
 
-  // YYYY-MM-DD veya ISO → ISO string (DateTime?), yoksa null
   const safeIsoDateTime = (s) => {
     const v = (s || "").trim();
     if (!v) return null;
@@ -183,7 +158,6 @@ const dedupeByKey = (arr, keyFn) => {
     return isNaN(dt.getTime()) ? null : dt.toISOString();
   };
 
-  // "Name | URL" satırları → { Store, Name, Url }
   const parseStoreLinks = (s) => {
     const rows = parseLines(s);
     const out = [];
@@ -210,125 +184,106 @@ const dedupeByKey = (arr, keyFn) => {
       }
       if (parts.length) return parts.join(" | ");
     }
-    if (d?.title || d?.detail)
-      return `${d.title ?? "Error"}${d.detail ? `: ${d.detail}` : ""}`;
+    if (d?.title || d?.detail) return `${d.title ?? "Error"}${d.detail ? `: ${d.detail}` : ""}`;
     if (err?.message) return err.message;
     try { return JSON.stringify(d ?? err); } catch { return "Unknown error"; }
   };
 
   const extractYouTubeId = (url) => {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
-    if (u.hostname === "youtu.be") return u.pathname.slice(1) || null;
-    return null;
-  } catch { return null; }
-};
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
+      if (u.hostname === "youtu.be") return u.pathname.slice(1) || null;
+      return null;
+    } catch { return null; }
+  };
 
-const parseTrailersLines = (s) =>
-  (s || "")
-    .split(/\r?\n/)
-    .map(x => x.trim())
-    .filter(Boolean)
-    .map(url => {
-      const ytId = extractYouTubeId(url);
-      return {
-        Platform: ytId ? "youtube" : "generic",
-        Url: url,
-        YouTubeId: ytId
-      };
-    });
+  const parseTrailersLines = (s) =>
+    (s || "")
+      .split(/\r?\n/)
+      .map(x => x.trim())
+      .filter(Boolean)
+      .map(url => {
+        const ytId = extractYouTubeId(url);
+        return { Platform: ytId ? "youtube" : "generic", Url: url, YouTubeId: ytId };
+      });
 
-  // ---------- AUTO: search (STRICT) ----------
+  // ---------- AUTO: search ----------
   const runSearch = async () => {
-  const term = q.trim();
-  if (!term) return;
-  setLoading(true);
-  setResults([]);
-  setPicked(null);
-  setMerged(null);
+    const term = q.trim();
+    if (!term) return;
+    setLoading(true); setResults([]); setPicked(null); setMerged(null);
 
-  try {
-    const [igdbRes, rawgRes] = await Promise.all([
-      API.get("/igdb/search", {
-        params: { q: term, page: 1, pageSize: 20, dedupe: true, details: true, useSearch: true },
-      }),
-      API.get("/rawg/search", { params: { q: term, page: 1, pageSize: 20 } }),
-    ]);
+    try {
+      const [igdbRes, rawgRes] = await Promise.all([
+        API.get("/igdb/search", {
+          params: { q: term, page: 1, pageSize: 20, dedupe: true, details: true, useSearch: true },
+        }),
+        API.get("/rawg/search", { params: { q: term, page: 1, pageSize: 20 } }),
+      ]);
 
-    // IGDB: details=true olduğundan yıl + platform geliyor
-    const igdbItems = (igdbRes?.data?.items || []).map(x => ({
-      id:        x.id ?? x.Id,
-      name:      x.name ?? x.Name,
-      year:      parseYear(x.year ?? x.Year),
-      platforms: x.platforms ?? x.Platforms ?? [],
-    }));
+      const igdbItems = (igdbRes?.data?.items || []).map(x => ({
+        id: x.id ?? x.Id,
+        name: x.name ?? x.Name,
+        year: parseYear(x.year ?? x.Year),
+        platforms: x.platforms ?? x.Platforms ?? [],
+        cover: x.cover ?? x.Cover ?? null,
+      }));
 
-    // RAWG: 1. adımda API'yi genişlettik (year/platforms geliyor)
-    const rawgItems = (rawgRes?.data?.items || []).map(x => ({
-      id:        x.id ?? x.Id,
-      name:      x.name ?? x.Name,
-      year:      parseYear(x.year ?? x.Year),
-      platforms: x.platforms ?? x.Platforms ?? [],
-    }));
+      const rawgItems = (rawgRes?.data?.items || []).map(x => ({
+        id: x.id ?? x.Id,
+        name: x.name ?? x.Name,
+        year: parseYear(x.year ?? x.Year),
+        platforms: x.platforms ?? x.Platforms ?? [],
+        cover: x.backgroundImage ?? x.BackgroundImage ?? x.image ?? x.Image ?? null,
+      }));
 
-    // === Çoklu aday mantığı ===
-    const pairs = [];
-    const THRESH = 0.94;
+      const pairs = [];
+      const THRESH = 0.94;
 
-    for (const g of igdbItems) {
-      for (const r of rawgItems) {
-        const s = pairScore(g, r);
-        if (isStrongMatch(g, r, s) && s >= THRESH) {
-          const labelBase = (g.name?.length || 0) >= (r.name?.length || 0) ? g.name : r.name;
-          const label = g.year ? `${labelBase} (${g.year})` : (r.year ? `${labelBase} (${r.year})` : labelBase);
-          pairs.push({
-            label,
-            igdbId: g.id,
-            rawgId: r.id,
-            score: s,
-            year: g.year ?? r.year ?? null,
+      for (const g of igdbItems) {
+        for (const r of rawgItems) {
+          const s = pairScore(g, r);
+          if (isStrongMatch(g, r, s) && s >= THRESH) {
+            const labelBase = (g.name?.length || 0) >= (r.name?.length || 0) ? g.name : r.name;
+            const label = g.year ? `${labelBase} (${g.year})` : (r.year ? `${labelBase} (${r.year})` : labelBase);
+            pairs.push({
+              label, igdbId: g.id, rawgId: r.id, score: s,
+              year: g.year ?? r.year ?? null, cover: g.cover || r.cover || null,
+            });
+          }
+        }
+      }
+
+      const key = p => `${p.igdbId}-${p.rawgId}`;
+      const seen = new Set();
+      const uniqPairs = [];
+      for (const p of pairs.sort((a, b) => b.score - a.score || a.label.localeCompare(b.label))) {
+        if (seen.has(key(p))) continue;
+        seen.add(key(p));
+        uniqPairs.push(p);
+      }
+
+      const matchedIgdb = new Set(uniqPairs.map(p => p.igdbId));
+      for (const g of igdbItems) {
+        if (!matchedIgdb.has(g.id)) {
+          uniqPairs.push({
+            label: g.year ? `${g.name} (${g.year})` : g.name,
+            igdbId: g.id, rawgId: null, score: 0.5, year: g.year ?? null, cover: g.cover || null,
           });
         }
       }
+
+      setResults(uniqPairs);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Aynı IGDB-RAWG çifti tekrarlanmasın
-    const key = p => `${p.igdbId}-${p.rawgId}`;
-    const seen = new Set();
-    const uniqPairs = [];
-    for (const p of pairs.sort((a,b) => b.score - a.score || a.label.localeCompare(b.label))) {
-      if (seen.has(key(p))) continue;
-      seen.add(key(p));
-      uniqPairs.push(p);
-    }
-
-    // Eşleşemeyen IGDB sonuçlarını da göster (kullanıcı elle seçebilsin)
-    const matchedIgdb = new Set(uniqPairs.map(p => p.igdbId));
-    for (const g of igdbItems) {
-      if (!matchedIgdb.has(g.id)) {
-        uniqPairs.push({
-          label: g.year ? `${g.name} (${g.year})` : g.name,
-          igdbId: g.id,
-          rawgId: null,
-          score: 0.5,
-          year: g.year ?? null,
-        });
-      }
-    }
-
-    setResults(uniqPairs);
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-  // ---------- AUTO: preview ----------
+  // ---------- AUTO: preview/commit ----------
   const doPreview = async () => {
     if (!picked?.igdbId || !picked?.rawgId) return;
-    setPreviewLoading(true);
-    setMerged(null);
+    setPreviewLoading(true); setMerged(null);
     try {
       const { data } = await API.get("/merge/preview", {
         params: { igdbId: picked.igdbId, rawgId: picked.rawgId }
@@ -339,13 +294,9 @@ const parseTrailersLines = (s) =>
     }
   };
 
-  // ---------- AUTO: commit (preview şart) ----------
   const doCommitAuto = async () => {
     if (!picked?.igdbId || !picked?.rawgId) return;
-    if (!merged) {
-      await doPreview();
-      if (!merged) return;
-    }
+    if (!merged) { await doPreview(); if (!merged) return; }
 
     try {
       const { data } = await API.post("/import/preview/one", merged, {
@@ -371,18 +322,14 @@ const parseTrailersLines = (s) =>
     }
   };
 
-  // ---------- MANUAL: commit (MergedGameDto birebir, Createdat göndermiyoruz) ----------
+  // ---------- MANUAL: commit ----------
   const doCommitManual = async () => {
     setManualError(null);
-
-    if (!mName.trim()) {
-      setManualError("Name zorunlu.");
-      return;
-    }
+    if (!mName.trim()) { setManualError("Name zorunlu."); return; }
 
     const dto = {
       Name: mName.trim(),
-      ReleaseDate: safeIsoDateTime(mRelease),          // DateTime?
+      ReleaseDate: safeIsoDateTime(mRelease),
       Metacritic: toIntOrNull(mMetacritic),
       GgDbRating: toIntOrNull(mGgDbRating),
       MainImage: mCover || null,
@@ -396,7 +343,7 @@ const parseTrailersLines = (s) =>
       Tags: parseCsv(mTags),
       Genres: parseCsv(mGenres),
       Platforms: parseCsv(mPlatforms),
-      Images: parseCsv(mImages), // URL list
+      Images: parseCsv(mImages),
 
       MinRequirement: mMinReqText.trim() ? { Text: mMinReqText.trim() } : null,
       RecRequirement: mRecReqText.trim() ? { Text: mRecReqText.trim() } : null,
@@ -422,8 +369,6 @@ const parseTrailersLines = (s) =>
 
       Screenshots: parseCsv(mScreenshots),
       Trailers: parseTrailersLines(mTrailers)
-
-      // Createdat YOK — backend SetOnInsert ile otomatik DateTime.UtcNow yazacak
     };
 
     try {
@@ -454,16 +399,13 @@ const parseTrailersLines = (s) =>
   };
 
   const handleClose = () => {
-    // reset all
     setMode("auto");
-
     setQ(""); setLoading(false); setResults([]); setPicked(null);
     setPreviewLoading(false); setMerged(null);
 
     setMName(""); setMRelease(""); setMCover("");
     setMDeveloper(""); setMPublisher("");
-    setMScreenshots("");
-    setMTrailers("");
+    setMScreenshots(""); setMTrailers("");
 
     setMMetacritic(""); setMGgDbRating(""); setMPopularity("");
     setMGenres(""); setMPlatforms(""); setMAbout("");
@@ -477,286 +419,311 @@ const parseTrailersLines = (s) =>
     setMStoreLinks("");
 
     setMTtbH(""); setMTtbN(""); setMTtbC("");
-
     setManualSaving(false); setManualError(null);
     onClose?.();
   };
 
   return (
-    <div className="modal-backdrop">
+    <div className="gg-backdrop">
       <div className="modal-card">
         <div className="modal-head">
           <h3>Add Game</h3>
+
+          {/* Tabs – görselin aynı kalması için kendi .tab CSS’in duruyor */}
           <div className="tabs">
-            <button
-              className={`tab ${mode === "auto" ? "active" : ""}`}
-              onClick={() => setMode("auto")}
-            >
+            <button className={`tab ${mode === "auto" ? "active" : ""}`} onClick={() => setMode("auto")}>
               Auto-merge (IGDB + RAWG)
             </button>
-            <button
-              className={`tab ${mode === "manual" ? "active" : ""}`}
-              onClick={() => setMode("manual")}
-            >
+            <button className={`tab ${mode === "manual" ? "active" : ""}`} onClick={() => setMode("manual")}>
               Manual
             </button>
           </div>
+
           <button className="icon-btn" onClick={handleClose} aria-label="Close">✕</button>
         </div>
 
         {mode === "auto" ? (
           <>
-            <div className="single-search">
+            {/* Search row → Bootstrap form-control + btn  */}
+            <div className="d-flex gap-3 my-2">
               <input
                 value={q}
                 onChange={e => setQ(e.target.value)}
                 placeholder="Type a game name (e.g., The Sims 4)…"
                 onKeyDown={e => { if (e.key === "Enter") runSearch(); }}
+                className="form-control input-dark border-1"
               />
-              <button className="btn primary" onClick={runSearch} disabled={loading}>
+              <button className="btn btn-primary fw-bold" onClick={runSearch} disabled={loading}>
                 {loading ? "Searching…" : "Search"}
               </button>
             </div>
 
-            <div className="results-list">
+            {/* RESULTS → Bootstrap row/col + card + ratio */}
+            <div className="rounded-3 p-3">
               {loading ? (
-                <div className="empty-hint">Searching…</div>
+                <div className="text-center py-3 text-secondary">Searching…</div>
               ) : results.length === 0 ? (
-                <div className="empty-hint">
+                <div className="text-center py-3 text-secondary">
                   {q.trim() ? "No strict matches (need IGDB+RAWG pair ≥ 0.93)" : "No results"}
                 </div>
               ) : (
-                results.map((row, i) => (
-                  <label
-                    key={`${row.label}_${row.igdbId}_${row.rawgId}_${i}`}
-                    className={`result-item ${picked?.igdbId === row.igdbId && picked?.rawgId === row.rawgId ? "active" : ""}`}
-                  >
-                    <input
-                      type="radio"
-                      name="gamePick"
-                      checked={picked?.igdbId === row.igdbId && picked?.rawgId === row.rawgId}
-                      onChange={() => { setPicked(row); setMerged(null); }}
-                    />
-                    <span className="ri-name">{row.label}</span>
-                    <span className="badge ok">Match {(row.score * 100).toFixed(0)}%</span>
-                  </label>
-                ))
+                <div className="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3">
+                  {results.map((row, i) => {
+                    const active = picked?.igdbId === row.igdbId && picked?.rawgId === row.rawgId;
+                    return (
+                      <label
+                        key={`${row.label}_${row.igdbId}_${row.rawgId}_${i}`}
+                        className="col"
+                        title={row.label}
+                        onClick={() => { setPicked(row); setMerged(null); }}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <input type="radio" name="gamePick" checked={active} onChange={() => {}} className="d-none" />
+                        <div className={`card h-100 bg-body-tertiary ${active ? "border-primary shadow" : "border-secondary"} border-1`}>
+                          <div className="position-relative">
+                            <div className="ratio ratio-16x9 bg-black">
+                              {row.cover ? (
+                                <img src={row.cover} alt={row.label} loading="lazy" className="card-img-top object-fit" />
+                              ) : (
+                                <div className="d-flex align-items-center justify-content-center text-secondary">No Image</div>
+                              )}
+                            </div>
+                            <div className="position-absolute top-0 start-0 p-2 d-flex gap-2 w-100 justify-content-between">
+                              
+                              {typeof row.score === "number" && (
+                                <span className="badge text-bg-dark border border-light-subtle">
+                                  {Math.round(row.score * 100)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="card-body py-2">
+                            <div className="fw-bold text-light" style={{ lineHeight: 1.2, minHeight: "2.4em" }}>
+                              {row.label}
+                            </div>
+                            {row.year && <div className="text-secondary small">{row.year}</div>}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
-            <div className="preview-actions">
-              <button className="btn secondary" onClick={doPreview} disabled={!picked || previewLoading}>
+            {/* Actions */}
+            <div className="d-flex justify-content-end gap-2 my-3">
+              <button className="btn btn-secondary" onClick={doPreview} disabled={!picked || previewLoading}>
                 {previewLoading ? "Merging…" : "Preview & Merge"}
               </button>
-              <button className="btn primary" onClick={doCommitAuto} disabled={!picked}>
+              <button className="btn btn-primary fw-bold" onClick={doCommitAuto} disabled={!picked}>
                 Add (Commit)
               </button>
             </div>
 
+            {/* Merge preview → Bootstrap grid */}
             {merged && (
-              <div className="merge-preview">
-                <div className="mp-left">
-                  {merged.mainImage
-                    ? <img src={merged.mainImage} alt="cover" />
-                    : <div className="no-cover">No Cover</div>}
-                </div>
-                <div className="mp-right">
-                  <div className="mp-title">{merged.name}</div>
-                  <div className="mp-row"><b>Release:</b> {merged.releaseDate ? new Date(merged.releaseDate).toISOString().slice(0,10) : "—"}</div>
-                  <div className="mp-row"><b>Developer:</b> {merged.developer || "—"}</div>
-                  <div className="mp-row"><b>Publisher:</b> {merged.publisher || "—"}</div>
-                  <div className="mp-row"><b>Genres:</b> {(merged.genres || []).join(", ") || "—"}</div>
-                  <div className="mp-row"><b>Platforms:</b> {(merged.platforms || []).join(", ") || "—"}</div>
-                  <div className="mp-row"><b>About:</b> {merged.about || "—"}</div>
-                  {/* --- Screenshots preview --- */}
-{Array.isArray(merged.screenshots) && merged.screenshots.length > 0 && (
-  <>
-    <div className="mp-subtitle">Screenshots</div>
-    <div className="ss-grid">
-      {merged.screenshots.slice(0, 8).map((u, i) => (
-        <img key={i} src={u} alt={`ss-${i}`} className="ss-img" />
-      ))}
-    </div>
-  </>
-)}
+              <div className="border border-secondary rounded-3 p-3">
+                <div className="row g-3">
+                  <div className="col-12 col-md-4">
+                    {merged.mainImage ? (
+                      <img src={merged.mainImage} alt="cover" className="w-100 rounded-2 object-fit-cover" style={{ aspectRatio: "16/9" }} />
+                    ) : (
+                      <div className="no-cover">No Cover</div>
+                    )}
+                  </div>
+                  <div className="col-12 col-md-8">
+                    <div className="mp-title">{merged.name}</div>
+                    <div className="mp-row"><b>Release:</b> {merged.releaseDate ? new Date(merged.releaseDate).toISOString().slice(0,10) : "—"}</div>
+                    <div className="mp-row"><b>Developer:</b> {merged.developer || "—"}</div>
+                    <div className="mp-row"><b>Publisher:</b> {merged.publisher || "—"}</div>
+                    <div className="mp-row"><b>Genres:</b> {(merged.genres || []).join(", ") || "—"}</div>
+                    <div className="mp-row"><b>Platforms:</b> {(merged.platforms || []).join(", ") || "—"}</div>
+                    <div className="mp-row"><b>About:</b> {merged.about || "—"}</div>
 
+                    {Array.isArray(merged.screenshots) && merged.screenshots.length > 0 && (
+                      <>
+                        <div className="mp-subtitle">Screenshots</div>
+                        <div className="row g-2">
+                          {merged.screenshots.slice(0, 8).map((u, i) => (
+                            <div className="col-6 col-md-3" key={i}>
+                              <img src={u} alt={`ss-${i}`} className="w-100 rounded-2 object-fit-cover" style={{ height: 80 }} />
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
           </>
         ) : (
           <>
-            {/* MANUAL FORM — DTO'daki tüm alanlar (Createdat hariç) */}
-            <div className="form-grid">
-              <div className="field">
-                <label>Name *</label>
-                <input value={mName} onChange={e => setMName(e.target.value)} placeholder="The Witcher 3: Wild Hunt" />
-              </div>
+            {/* MANUAL FORM → Bootstrap grid + form-control */}
+            <div className="bg-dark border border-secondary rounded-3 p-3">
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Name *</label>
+                  <input className="form-control bg-body-tertiary" value={mName} onChange={e => setMName(e.target.value)} placeholder="The Witcher 3: Wild Hunt" />
+                </div>
 
-              <div className="field">
-                <label>Release (YYYY-MM-DD or ISO)</label>
-                <input value={mRelease} onChange={e => setMRelease(e.target.value)} placeholder="2015-05-19" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Release (YYYY-MM-DD or ISO)</label>
+                  <input className="form-control bg-body-tertiary" value={mRelease} onChange={e => setMRelease(e.target.value)} placeholder="2015-05-19" />
+                </div>
 
-              <div className="field">
-                <label>Cover URL (MainImage)</label>
-                <input value={mCover} onChange={e => setMCover(e.target.value)} placeholder="https://..." />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Cover URL (MainImage)</label>
+                  <input className="form-control bg-body-tertiary" value={mCover} onChange={e => setMCover(e.target.value)} placeholder="https://..." />
+                </div>
 
-              <div className="field">
-                <label>Developer</label>
-                <input value={mDeveloper} onChange={e => setMDeveloper(e.target.value)} placeholder="CD Projekt RED" />
-              </div>
+                <div className="col-md-3">
+                  <label className="form-label small fw-bold text-secondary">Developer</label>
+                  <input className="form-control bg-body-tertiary" value={mDeveloper} onChange={e => setMDeveloper(e.target.value)} placeholder="CD Projekt RED" />
+                </div>
 
-              <div className="field">
-                <label>Publisher</label>
-                <input value={mPublisher} onChange={e => setMPublisher(e.target.value)} placeholder="CD Projekt RED" />
-              </div>
+                <div className="col-md-3">
+                  <label className="form-label small fw-bold text-secondary">Publisher</label>
+                  <input className="form-control bg-body-tertiary" value={mPublisher} onChange={e => setMPublisher(e.target.value)} placeholder="CD Projekt RED" />
+                </div>
 
-              <div className="field">
-                <label>Metacritic</label>
-                <input value={mMetacritic} onChange={e => setMMetacritic(e.target.value)} placeholder="91" />
-              </div>
+                <div className="col-md-3">
+                  <label className="form-label small fw-bold text-secondary">Metacritic</label>
+                  <input className="form-control bg-body-tertiary" value={mMetacritic} onChange={e => setMMetacritic(e.target.value)} placeholder="91" />
+                </div>
 
-              <div className="field">
-                <label>GgDbRating</label>
-                <input value={mGgDbRating} onChange={e => setMGgDbRating(e.target.value)} placeholder="88" />
-              </div>
+                <div className="col-md-3">
+                  <label className="form-label small fw-bold text-secondary">GgDbRating</label>
+                  <input className="form-control bg-body-tertiary" value={mGgDbRating} onChange={e => setMGgDbRating(e.target.value)} placeholder="88" />
+                </div>
 
-              <div className="field">
-                <label>Popularity</label>
-                <input value={mPopularity} onChange={e => setMPopularity(e.target.value)} placeholder="1200" />
-              </div>
+                <div className="col-md-3">
+                  <label className="form-label small fw-bold text-secondary">Popularity</label>
+                  <input className="form-control bg-body-tertiary" value={mPopularity} onChange={e => setMPopularity(e.target.value)} placeholder="1200" />
+                </div>
 
-              <div className="field">
-                <label>Genres (comma-separated)</label>
-                <input value={mGenres} onChange={e => setMGenres(e.target.value)} placeholder="RPG, Adventure" />
-              </div>
+                <div className="col-md-9">
+                  <label className="form-label small fw-bold text-secondary">Genres (comma-separated)</label>
+                  <input className="form-control bg-body-tertiary" value={mGenres} onChange={e => setMGenres(e.target.value)} placeholder="RPG, Adventure" />
+                </div>
 
-              <div className="field">
-                <label>Platforms (comma-separated)</label>
-                <input value={mPlatforms} onChange={e => setMPlatforms(e.target.value)} placeholder="PC, PS5, Xbox Series" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Platforms (comma-separated)</label>
+                  <input className="form-control bg-body-tertiary" value={mPlatforms} onChange={e => setMPlatforms(e.target.value)} placeholder="PC, PS5, Xbox Series" />
+                </div>
 
-              <div className="field col-span-2">
-                <label>About / Story</label>
-                <textarea rows={3} value={mAbout} onChange={e => setMAbout(e.target.value)} placeholder="Short summary..." />
-              </div>
+                <div className="col-12">
+                  <label className="form-label small fw-bold text-secondary">About / Story</label>
+                  <textarea rows={3} className="form-control bg-body-tertiary" value={mAbout} onChange={e => setMAbout(e.target.value)} placeholder="Short summary..." />
+                </div>
 
-              <div className="field">
-                <label>Age Ratings (comma-separated)</label>
-                <input value={mAgeRatings} onChange={e => setMAgeRatings(e.target.value)} placeholder="PEGI 18, M" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Age Ratings (comma-separated)</label>
+                  <input className="form-control bg-body-tertiary" value={mAgeRatings} onChange={e => setMAgeRatings(e.target.value)} placeholder="PEGI 18, M" />
+                </div>
 
-              <div className="field">
-                <label>DLCs (comma-separated)</label>
-                <input value={mDlcs} onChange={e => setMDlcs(e.target.value)} placeholder="Hearts of Stone, Blood and Wine" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">DLCs (comma-separated)</label>
+                  <input className="form-control bg-body-tertiary" value={mDlcs} onChange={e => setMDlcs(e.target.value)} placeholder="Hearts of Stone, Blood and Wine" />
+                </div>
 
-              <div className="field">
-                <label>Tags (comma-separated)</label>
-                <input value={mTags} onChange={e => setMTags(e.target.value)} placeholder="Open World, Fantasy, Story Rich" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Tags (comma-separated)</label>
+                  <input className="form-control bg-body-tertiary" value={mTags} onChange={e => setMTags(e.target.value)} placeholder="Open World, Fantasy, Story Rich" />
+                </div>
 
-              <div className="field">
-                <label>Interface Languages (comma-separated)</label>
-                <input value={mIfaceLangs} onChange={e => setMIfaceLangs(e.target.value)} placeholder="English, Turkish" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Interface Languages</label>
+                  <input className="form-control bg-body-tertiary" value={mIfaceLangs} onChange={e => setMIfaceLangs(e.target.value)} placeholder="English, Turkish" />
+                </div>
 
-              <div className="field">
-                <label>Audio Languages (comma-separated)</label>
-                <input value={mAudioLangs} onChange={e => setMAudioLangs(e.target.value)} placeholder="English" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Audio Languages</label>
+                  <input className="form-control bg-body-tertiary" value={mAudioLangs} onChange={e => setMAudioLangs(e.target.value)} placeholder="English" />
+                </div>
 
-              <div className="field">
-                <label>Subtitles (comma-separated)</label>
-                <input value={mSubtitles} onChange={e => setMSubtitles(e.target.value)} placeholder="English, Turkish" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Subtitles</label>
+                  <input className="form-control bg-body-tertiary" value={mSubtitles} onChange={e => setMSubtitles(e.target.value)} placeholder="English, Turkish" />
+                </div>
 
-              <div className="field">
-                <label>Content Warnings (comma-separated)</label>
-                <input value={mContentWarnings} onChange={e => setMContentWarnings(e.target.value)} placeholder="Violence, Mature" />
-              </div>
+                <div className="col-12">
+                  <label className="form-label small fw-bold text-secondary">Content Warnings</label>
+                  <input className="form-control bg-body-tertiary" value={mContentWarnings} onChange={e => setMContentWarnings(e.target.value)} placeholder="Violence, Mature" />
+                </div>
 
-              <div className="field col-span-2">
-                <label>Images (comma-separated URLs)</label>
-                <input value={mImages} onChange={e => setMImages(e.target.value)} placeholder="https://img1.jpg, https://img2.jpg" />
-              </div>
+                <div className="col-12">
+                  <label className="form-label small fw-bold text-secondary">Images (comma-separated URLs)</label>
+                  <input className="form-control bg-body-tertiary" value={mImages} onChange={e => setMImages(e.target.value)} placeholder="https://img1.jpg, https://img2.jpg" />
+                </div>
 
-              <div className="field">
-                <label>MinRequirement Text</label>
-                <input value={mMinReqText} onChange={e => setMMinReqText(e.target.value)} placeholder="Minimum: ..." />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">MinRequirement Text</label>
+                  <input className="form-control bg-body-tertiary" value={mMinReqText} onChange={e => setMMinReqText(e.target.value)} placeholder="Minimum: ..." />
+                </div>
 
-              <div className="field">
-                <label>RecRequirement Text</label>
-                <input value={mRecReqText} onChange={e => setMRecReqText(e.target.value)} placeholder="Recommended: ..." />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">RecRequirement Text</label>
+                  <input className="form-control bg-body-tertiary" value={mRecReqText} onChange={e => setMRecReqText(e.target.value)} placeholder="Recommended: ..." />
+                </div>
 
-              <div className="field">
-                <label>Engines (comma-separated)</label>
-                <input value={mEngines} onChange={e => setMEngines(e.target.value)} placeholder="REDengine 3, Unreal" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Engines</label>
+                  <input className="form-control bg-body-tertiary" value={mEngines} onChange={e => setMEngines(e.target.value)} placeholder="REDengine 3, Unreal" />
+                </div>
 
-              <div className="field">
-                <label>Awards (each line)</label>
-                <textarea rows={3} value={mAwards} onChange={e => setMAwards(e.target.value)} placeholder={"GOTY 2015\nBest RPG 2015"} />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Awards (each line)</label>
+                  <textarea rows={3} className="form-control bg-body-tertiary" value={mAwards} onChange={e => setMAwards(e.target.value)} placeholder={"GOTY 2015\nBest RPG 2015"} />
+                </div>
 
-              <div className="field">
-                <label>Cast (each line)</label>
-                <textarea rows={3} value={mCast} onChange={e => setMCast(e.target.value)} placeholder={"Voice Actor 1\nVoice Actor 2"} />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Cast (each line)</label>
+                  <textarea rows={3} className="form-control bg-body-tertiary" value={mCast} onChange={e => setMCast(e.target.value)} placeholder={"Voice Actor 1\nVoice Actor 2"} />
+                </div>
 
-              <div className="field">
-                <label>Crew (each line)</label>
-                <textarea rows={3} value={mCrew} onChange={e => setMCrew(e.target.value)} placeholder={"John Doe - Director\nJane Doe - Composer"} />
-              </div>
-              <div className="field col-span-2">
-              <label>Screenshots (comma-separated URLs)</label>
-              <input
-                value={mScreenshots}
-                onChange={e => setMScreenshots(e.target.value)}
-                placeholder="https://img1.jpg, https://img2.png"
-              />
-            </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">Crew (each line)</label>
+                  <textarea rows={3} className="form-control bg-body-tertiary" value={mCrew} onChange={e => setMCrew(e.target.value)} placeholder={"John Doe - Director\nJane Doe - Composer"} />
+                </div>
 
-            <div className="field col-span-2">
-              <label>Trailers (each line: full URL)</label>
-              <textarea
-                rows={3}
-                value={mTrailers}
-                onChange={e => setMTrailers(e.target.value)}
-                placeholder={"https://youtu.be/VIDEOID\nhttps://www.youtube.com/watch?v=VIDEOID"}
-              />
-            </div>
+                <div className="col-12">
+                  <label className="form-label small fw-bold text-secondary">Screenshots (comma-separated URLs)</label>
+                  <input className="form-control bg-body-tertiary" value={mScreenshots} onChange={e => setMScreenshots(e.target.value)} placeholder="https://img1.jpg, https://img2.png" />
+                </div>
 
+                <div className="col-12">
+                  <label className="form-label small fw-bold text-secondary">Trailers (each line: full URL)</label>
+                  <textarea rows={3} className="form-control bg-body-tertiary" value={mTrailers} onChange={e => setMTrailers(e.target.value)} placeholder={"https://youtu.be/VIDEOID\nhttps://www.youtube.com/watch?v=VIDEOID"} />
+                </div>
 
-              <div className="field col-span-2">
-                <label>Store Links (one per line: Name | URL)</label>
-                <textarea rows={3} value={mStoreLinks} onChange={e => setMStoreLinks(e.target.value)} placeholder={"Steam | https://store.steampowered.com/app/...\nGOG | https://www.gog.com/game/..."} />
-              </div>
+                <div className="col-12">
+                  <label className="form-label small fw-bold text-secondary">Store Links (one per line: Name | URL)</label>
+                  <textarea rows={3} className="form-control bg-body-tertiary" value={mStoreLinks} onChange={e => setMStoreLinks(e.target.value)} placeholder={"Steam | https://store.steampowered.com/app/...\nGOG | https://www.gog.com/game/..."} />
+                </div>
 
-              <div className="field">
-                <label>TimeToBeat (Hastily / Normally / Completely)</label>
-                <div className="ttb-row">
-                  <input value={mTtbH} onChange={e => setMTtbH(e.target.value)} placeholder="25" />
-                  <input value={mTtbN} onChange={e => setMTtbN(e.target.value)} placeholder="60" />
-                  <input value={mTtbC} onChange={e => setMTtbC(e.target.value)} placeholder="90" />
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-secondary">TimeToBeat (H / N / C)</label>
+                  <div className="d-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                    <input className="form-control bg-body-tertiary" value={mTtbH} onChange={e => setMTtbH(e.target.value)} placeholder="25" />
+                    <input className="form-control bg-body-tertiary" value={mTtbN} onChange={e => setMTtbN(e.target.value)} placeholder="60" />
+                    <input className="form-control bg-body-tertiary" value={mTtbC} onChange={e => setMTtbC(e.target.value)} placeholder="90" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {manualError && (
-              <div className="card" style={{ marginTop: 8, padding: 10, border: "1px solid var(--line)" }}>
-                {manualError}
+              {manualError && (
+                <div className="card border-1 mt-2" style={{ padding: 10, borderColor: "var(--line)" }}>
+                  {manualError}
+                </div>
+              )}
+
+              <div className="d-flex justify-content-end mt-3">
+                <button className="btn btn-primary fw-bold" onClick={doCommitManual} disabled={manualSaving}>
+                  {manualSaving ? "Saving…" : "Add (Manual)"}
+                </button>
               </div>
-            )}
-
-            <div className="preview-actions">
-              <button className="btn primary" onClick={doCommitManual} disabled={manualSaving}>
-                {manualSaving ? "Saving…" : "Add (Manual)"}
-              </button>
             </div>
           </>
         )}

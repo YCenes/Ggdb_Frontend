@@ -49,3 +49,7 @@ export async function updateUserRole(id, role) {
   const { data } = await API.patch(`/admin/${id}/role`, { role });
   return data;
 }
+
+export async function setUserBan(id, isBanned) {
+  return API.patch(`/admin/${id}/ban`, { isBanned });
+}
