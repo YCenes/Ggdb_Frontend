@@ -747,3 +747,180 @@ textarea.form-control.bg-body-tertiary {
   -webkit-box-shadow:0 0 0 1000px #0b1423 inset;
   -webkit-text-fill-color:#e5e7eb;
 }
+
+
+/* =========================================
+   Manage Game – Responsive improves
+   ========================================= */
+
+/* Tablet ve aşağısı: toolbar tek kolona, filtreler 2 sütun */
+@media (max-width: 980px) {
+  .manage-game-page {
+    .page-title { font-size: 24px; }
+
+    .toolbar {
+      grid-template-columns: 1fr; /* search üstte, filtreler altta */
+      gap: 12px;
+
+      .search input {
+        padding: 12px 14px;
+        font-size: 14px;
+      }
+
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+
+        select {
+          min-width: 0;      /* sabit 180px kısıtını gevşet */
+          width: 100%;
+          padding: 10px 12px;
+          font-size: 14px;
+        }
+
+        .total {
+          grid-column: 1 / -1;
+          justify-self: end;
+          margin: 0;
+          font-size: 13px;
+        }
+      }
+    }
+
+    /* Tablo: gereksiz kolonları gizle, daha kompakt */
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .game-table {
+      thead th { font-size: 13px; padding: 12px 14px; }
+      tbody td { font-size: 13px; padding: 12px 14px; }
+
+      /* Kapak biraz küçülsün */
+      .td-cover img { width: 44px; height: 64px; }
+
+      /* Başlık satırını daha esnek yap */
+      .td-title { 
+        max-width: unset; 
+        white-space: normal; 
+        line-height: 1.25; 
+      }
+
+      /* Mobilde ilk daraltma: Developer + Genres + Story gizle */
+      thead th:nth-child(5), /* Developer */
+      tbody .td-developer,
+      thead th:nth-child(6), /* Genres */
+      tbody .td-genres,
+      thead th:nth-child(7), /* Story */
+      tbody .td-story {
+        display: none;
+      }
+
+      /* Aksiyon butonları dokunmatik için biraz büyüsün */
+      .td-actions .icon-btn {
+        width: 38px; height: 38px; border-radius: 10px;
+        margin-left: 6px;
+      }
+    }
+
+    /* Footer grid tek kolon, satırlar alt alta */
+    .table-footer {
+      grid-template-columns: 1fr;
+      row-gap: 10px;
+      .rows, .bulk-actions, .pager { justify-content: space-between; }
+      .bulk-actions { order: 3; }
+      .pager { order: 2; }
+      .rows { order: 1; }
+    }
+  }
+}
+
+/* Küçük telefonlar: filtreler tek sütun, paddings daha sıkı */
+@media (max-width: 560px) {
+  .manage-game-page {
+    padding: 16px;
+
+    .page-title { font-size: 22px; margin-bottom: 10px; }
+
+    .toolbar {
+      .filters { grid-template-columns: 1fr; gap: 8px; }
+      .search input { padding: 11px 12px; font-size: 13px; }
+    }
+
+    .game-table {
+      thead th { padding: 10px 12px; }
+      tbody td { padding: 10px 12px; }
+
+      /* Kapak daha da küçülsün */
+      .td-cover img { width: 40px; height: 58px; }
+
+      /* ID gibi uzun linkler taşmasın */
+      a { word-break: break-word; }
+    }
+
+    .table-footer .btn.small { padding: 8px 10px; }
+  }
+}
+
+/* Büyük telefonlar (560–720) için mikro düzeltmeler */
+@media (min-width: 561px) and (max-width: 720px) {
+  .manage-game-page {
+    .toolbar .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+}
+
+/* ===== Manage Game – Mobile title readability ===== */
+@media (max-width: 720px) {
+  .manage-game-page {
+    .table-wrapper { overflow-x: hidden; } /* yatay scroll'a gerek kalmasın */
+
+    .game-table {
+      table-layout: fixed; /* kalan alanı Title'a verelim */
+
+      /* Sütun genişliklerini netleştir */
+      thead .th-check,  tbody .td-check  { width: 40px; }
+      thead th:nth-child(2), tbody .td-cover { width: 60px; } /* Cover */
+      thead .th-actions, tbody .td-actions { width: 96px; }   /* Actions */
+
+      /* Küçük ekranda 'Release' sütununu gizle → Title alan kazansın */
+
+      /* Başlık rahat okusun: kelime bazlı kır, 3 satırda tut */
+      .td-title {
+        max-width: 100%;
+        white-space: normal;       /* tek satır zorunluluğunu kaldır */
+        word-break: normal;        /* kelime içinden kırma yok */
+        overflow-wrap: break-word; /* aşırı uzun tek kelimelerde kır */
+        line-height: 1.25;
+
+        /* link blok olsun ve çok satırda taşsın */
+        a {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;        /* istersen 2/4 yapabilirsin */
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-decoration: underline;   /* link hissi kalsın */
+        }
+      }
+
+      /* Kapak biraz küçülsün ki Title daha da genişlesin */
+      .td-cover img { width: 44px; height: 64px; }
+    }
+  }
+}
+
+/* Çok küçük telefonlarda daha agresif kısma */
+@media (max-width: 560px) {
+  .manage-game-page .game-table {
+    thead .th-actions, tbody .td-actions { width: 88px; }
+    .td-cover img { width: 40px; height: 58px; }
+
+    /* (İstersen) checkbox sütununu da daralt */
+    thead .th-check, tbody .td-check { width: 34px; }
+  }
+}
+
+
+
+

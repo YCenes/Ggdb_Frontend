@@ -330,12 +330,234 @@
 .admin-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.4);
-  backdrop-filter: blur(2px);
-  z-index: 50; /* sidebar'dan yüksek, header'dan düşük tutabilirsin ihtiyaca göre */
+  z-index: 10; /* sidebar'dan yüksek, header'dan düşük tutabilirsin ihtiyaca göre */
   opacity: 0; pointer-events: none;
   transition: opacity $transition ease;
 
   &.is-visible { opacity: 1; pointer-events: auto; }
   @media (min-width: 1024px) { display: none; }
+}
+
+
+
+/* === Global: mobil sidebar açıkken body scroll kilidi === */
+.no-scroll {
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* === İçerik, sabit header yüksekliğini hesaba katsın === */
+.admin-layout {
+  .admin-content {
+    padding-top: calc(#{$header-h} + 12px);
+  }
+}
+
+/* === Header: mobil burger === */
+.admin-header {
+  .mobile-menu-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-sm;
+    border: 0;
+    background: transparent;
+    color: $text;
+    cursor: pointer;
+    transition: background $transition ease;
+
+    &:hover { background: $bg-elev-2; }
+  }
+
+  /* 1024px altı: burger butonu göster, sağdaki kalabalığı sadeleştir */
+  @media (max-width: 1023.98px) {
+    .mobile-menu-btn { display: inline-flex; }
+
+    .header-right .chip { display: none; } /* metrik çiplerini gizle */
+    .header-right .notif-btn { display: inline-flex; } /* bildirim kalsın */
+  }
+
+  /* Güvenli alan (iOS vb.) */
+  padding-top: env(safe-area-inset-top);
+}
+
+/* === Sidebar: mobil off-canvas davranışını yumuşat === */
+.admin-sidebar {
+  transition: transform $transition ease, width $transition ease;
+
+  /* iOS safe area uyumu */
+  padding-top: env(safe-area-inset-top);
+}
+
+/* === Mobil overlay: tıklanabilir alan ve animasyon === */
+
+
+
+/* ========== HEADER: Mobile grid layout (<=768px) ========== */
+@media (max-width: 768px) {
+  .admin-header {
+    height: auto;                 /* sabit yükseklik yerine içerik kadar */
+    min-height: $header-h;        /* çok dar olmasın */
+    padding-top: env(safe-area-inset-top);
+
+    .inner {
+      display: grid;              /* flex yerine grid */
+      grid-template-columns: auto 1fr auto; /* burger | title | actions */
+      grid-template-areas:
+        "burger title actions"
+        "search search search";
+      gap: 10px;
+      align-items: center;
+      padding: 8px 12px;          /* mobilde daha sıkı padding */
+    }
+
+    /* GRID yerleşimi */
+    .mobile-menu-btn { grid-area: burger; }
+    .header-title    { grid-area: title; }
+    .header-right    { grid-area: actions; justify-self: end; }
+    .search          { grid-area: search; }
+
+    /* Başlık mobilde tek satırda, düzgün kesilsin */
+    .header-title {
+      min-width: 0;
+      h1 {
+        font-size: 18px;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      p { display: none; } /* alt açıklamayı gizle */
+    }
+
+    /* Arama: tam genişlik, tek satır aşağıda */
+    .search {
+      width: 100%;
+      max-width: none;
+      flex: initial;
+      margin-left: 0;
+
+      .search-icon { left: 12px; }
+      input {
+        width: 100%;
+        padding: 10px 12px 10px 36px;
+        font-size: 14px;
+      }
+    }
+
+    /* Sağ taraf: metrik chip'leri gizle, sadece önemli ikonlar kalsın */
+    .header-right {
+      gap: 8px;
+      .chip { display: none; }
+      .notif-btn { display: inline-flex; }
+      .user-wrap .user .meta { display: none; } /* isim/rol metnini gizle */
+    }
+
+    /* Burger görünür olsun (desktop'ta zaten gizlemiştik) */
+    .mobile-menu-btn {
+      display: inline-flex;
+      width: 36px; height: 36px;
+      border-radius: $radius-sm;
+      background: transparent;
+      border: 0;
+      color: $text;
+    }
+  }
+
+  /* İçerik, header yüksekliğini hesaba katsın */
+  .admin-layout .admin-content {
+    padding-top: calc(#{$header-h} + 8px);
+  }
+}
+
+/* ========== HEADER: Mobile grid layout (<=768px) ========== */
+@media (max-width: 768px) {
+  .admin-header {
+    height: auto;
+    min-height: $header-h;
+    padding-top: env(safe-area-inset-top);
+
+    .inner {
+      display: grid;
+      grid-template-columns: auto 1fr auto; /* burger | title | right */
+      grid-template-areas:
+        "burger title right"
+        "search search search";
+      gap: 10px;
+      align-items: center;
+      padding: 8px 12px;
+    }
+
+    /* GRID yerleşimi */
+    .mobile-menu-btn { grid-area: burger; }
+    .header-title    { grid-area: title; }
+    .header-right    { grid-area: right; justify-self: end; display: flex; align-items: center; gap: 8px; }
+    .search          { grid-area: search; }
+
+    /* Başlık: taşma olmasın */
+    .header-title {
+      min-width: 0;
+      h1 {
+        font-size: 18px;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      p { display: none; }
+    }
+
+    /* Arama alanı: tam genişlikte alt satır */
+    .search {
+      width: 100%;
+      max-width: none;
+      flex: initial;
+      margin-left: 0;
+
+      .search-icon { left: 12px; }
+      input {
+        width: 100%;
+        padding: 10px 12px 10px 36px;
+        font-size: 14px;
+      }
+    }
+
+    /* Sağ taraf: user-wrap da dahil */
+    .header-right {
+      .chip { display: none; } /* metrikleri gizle */
+      .notif-btn { display: inline-flex; }
+      .user-wrap {
+        display: flex;
+        align-items: center;
+        .user {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          img { width: 28px; height: 28px; border-radius: 50%; }
+          .meta {
+            display: none; /* mobilde isim/rol gizle */
+          }
+        }
+      }
+    }
+
+    /* Burger */
+    .mobile-menu-btn {
+      display: inline-flex;
+      width: 36px; height: 36px;
+      border-radius: $radius-sm;
+      background: transparent;
+      border: 0;
+      color: $text;
+      cursor: pointer;
+      &:hover { background: $bg-elev-2; }
+    }
+  }
+
+  /* İçerik padding */
+  .admin-layout .admin-content {
+    padding-top: calc(#{$header-h} + 8px);
+  }
 }

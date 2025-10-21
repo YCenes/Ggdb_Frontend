@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Home, Gauge, Layers3, Gamepad2, Users, BarChart3, Settings, ServerCog, Bug,
@@ -27,6 +27,23 @@ export default function Sidebar({ open, setOpen, mobileOpen, setMobileOpen }) {
     else setOpen(v => !v);
   };
 
+    // Header'daki burger'in yayınladığı olayı dinle
+  useEffect(() => {
+    const onToggle = () => {
+      setMobileOpen(prev => !prev);
+    };
+    document.addEventListener("ggdb:toggle-sidebar", onToggle);
+    return () => document.removeEventListener("ggdb:toggle-sidebar", onToggle);
+  }, [setMobileOpen]);
+
+  // Mobilde sidebar açıkken body scroll'u kilitle
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const shouldLock = isMobile && mobileOpen;
+    if (shouldLock) document.body.classList.add("no-scroll");
+    else document.body.classList.remove("no-scroll");
+    return () => document.body.classList.remove("no-scroll");
+  }, [isMobile, mobileOpen]);
   return (
     <>
       <div

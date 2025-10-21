@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+// src/pages/admin/modals/CreativeStoryModal.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import "../../../styles/pages/admin/_game-detail-admin.scss";
 import TagInput from "./TagInput";
 
-/** Modal shell (projendekiyle aynı) */
 function BottomModal({ open, onClose, children }) {
   if (!open) return null;
   return (
@@ -25,21 +25,12 @@ function Section({ emoji, title }) {
 }
 
 /**
- * CreditsModal
- * - data: GameDetailDto (GET dönüşü)
- * - onSave(payload) -> parent handlePersist ile DTO'ya yazılıyor
- *
- * draft alan adları:
- *  gameDirector: string
- *  writers: string[]
- *  artDirector: string
- *  leadActors: string[]
- *  voiceActors: string[]
- *  musicComposer: string
- *  cinematicsVfxTeam: string[]
+ * DB alan eşlemeleri (camel + PascalCase toleranslı)
+ *   gameDirector, writers[], artDirector,
+ *   leadActors[], voiceActors[], musicComposer, cinematicsVfxTeam[]
  */
-export default function CreditsModal({ open, onClose, editable = true, data = {}, onSave }) {
-  const mapIn = (src = {}) => ({
+export default function CreativeStoryModal({ open, onClose, editable, data, onSave }) {
+  const makeDraft = (src = {}) => ({
     gameDirector:      src.gameDirector      ?? src.GameDirector      ?? "",
     writers:           src.writers           ?? src.Writers           ?? [],
     artDirector:       src.artDirector       ?? src.ArtDirector       ?? "",
@@ -49,144 +40,96 @@ export default function CreditsModal({ open, onClose, editable = true, data = {}
     cinematicsVfxTeam: src.cinematicsVfxTeam ?? src.CinematicsVfxTeam ?? [],
   });
 
-  const [draft, setDraft] = useState(mapIn(data));
-  useEffect(() => { if (open) setDraft(mapIn(data)); }, [open, data]);
+  const [draft, setDraft] = useState(makeDraft(data));
 
-  // Global Save (üst bardaki Save'e basınca)
+  // Modal her açıldığında & data değiştiğinde hydrate
   useEffect(() => {
-    const handler = () => {
-      onSave?.({
-        // camelCase -> parent merge,
-        // (parent DTO derlerken camelCase/PascalCase'ı eşliyorsun)
-        gameDirector: draft.gameDirector?.trim() ?? "",
-        writers: draft.writers ?? [],
-        artDirector: draft.artDirector?.trim() ?? "",
-        leadActors: draft.leadActors ?? [],
-        voiceActors: draft.voiceActors ?? [],
-        musicComposer: draft.musicComposer?.trim() ?? "",
-        cinematicsVfxTeam: draft.cinematicsVfxTeam ?? [],
+    if (open) setDraft(makeDraft(data));
+  }, [data, open]);
 
-        // istersen PascalCase de gönder (opsiyonel güvenlik):
-        GameDirector: draft.gameDirector?.trim() ?? "",
-        Writers: draft.writers ?? [],
-        ArtDirector: draft.artDirector?.trim() ?? "",
-        LeadActors: draft.leadActors ?? [],
-        VoiceActors: draft.voiceActors ?? [],
-        MusicComposer: draft.musicComposer?.trim() ?? "",
-        CinematicsVfxTeam: draft.cinematicsVfxTeam ?? [],
-      });
-    };
-    window.addEventListener("ggdb:credits-save-request", handler);
-    return () => window.removeEventListener("ggdb:credits-save-request", handler);
+  // Üstteki global Save butonu basılınca bu modalı kaydettir
+  useEffect(() => {
+    const handler = () => onSave?.(draft);
+    window.addEventListener("ggdb:creative-save-request", handler);
+    return () => window.removeEventListener("ggdb:creative-save-request", handler);
   }, [draft, onSave]);
+
+  // OverviewModal ile aynı bağlayıcı: readOnly modda "-" göster
+  const bind = useMemo(() => ({
+    text: (k) => ({
+      value:
+        draft[k] && String(draft[k]).trim() !== ""
+          ? draft[k]
+          : (!editable ? "-" : ""),
+      readOnly: !editable,
+      onChange: (e) => setDraft({ ...draft, [k]: e.target.value }),
+    }),
+  }), [draft, editable]);
 
   return (
     <BottomModal open={open} onClose={onClose}>
       <div className="gd-form is-insheet big" style={{ gap: 18 }}>
         {/* Director & Scenario */}
         <Section emoji="🎬" title="Director & Scenario" />
-
         <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div className="col">
             <label>Game Director</label>
-            <input
-              type="text"
-              placeholder="-"
-              value={draft.gameDirector}
-              onChange={(e) => setDraft(d => ({ ...d, gameDirector: e.target.value }))}
-              disabled={!editable}
-            />
+            <input {...bind.text("gameDirector")} placeholder="-" />
           </div>
-
           <div className="col">
             <label>Writers / Scenario</label>
             <TagInput
-              values={draft.writers || []}
-              setValues={(v) => setDraft(d => ({ ...d, writers: v }))}
+              values={Array.isArray(draft.writers) ? draft.writers : []}
+              setValues={(v) => setDraft({ ...draft, writers: v })}
               placeholder="Type and press Enter..."
               disabled={!editable}
-              /* enterOnly desteği eklediysen: enterOnly */
             />
           </div>
-
           <div className="col" style={{ gridColumn: "1 / -1" }}>
             <label>Art Director</label>
-            <input
-              type="text"
-              placeholder="-"
-              value={draft.artDirector}
-              onChange={(e) => setDraft(d => ({ ...d, artDirector: e.target.value }))}
-              disabled={!editable}
-            />
+            <input {...bind.text("artDirector")} placeholder="-" />
           </div>
         </div>
 
         {/* Cast & Voice */}
         <Section emoji="🎭" title="Cast & Voice" />
-
         <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div className="col">
             <label>Lead Actors</label>
             <TagInput
-              values={draft.leadActors || []}
-              setValues={(v) => setDraft(d => ({ ...d, leadActors: v }))}
+              values={Array.isArray(draft.leadActors) ? draft.leadActors : []}
+              setValues={(v) => setDraft({ ...draft, leadActors: v })}
               placeholder="Type and press Enter..."
               disabled={!editable}
-              /* enterOnly */
             />
           </div>
-
           <div className="col">
             <label>Voice Actors</label>
             <TagInput
-              values={draft.voiceActors || []}
-              setValues={(v) => setDraft(d => ({ ...d, voiceActors: v }))}
+              values={Array.isArray(draft.voiceActors) ? draft.voiceActors : []}
+              setValues={(v) => setDraft({ ...draft, voiceActors: v })}
               placeholder="Type and press Enter..."
               disabled={!editable}
-              /* enterOnly */
             />
           </div>
         </div>
 
         {/* Music & Visual Effects */}
         <Section emoji="🎼" title="Music & Visual Effects" />
-
         <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div className="col">
             <label>Composer / Music</label>
-            <input
-              type="text"
-              placeholder="-"
-              value={draft.musicComposer}
-              onChange={(e) => setDraft(d => ({ ...d, musicComposer: e.target.value }))}
-              disabled={!editable}
-            />
+            <input {...bind.text("musicComposer")} placeholder="-" />
           </div>
-
           <div className="col">
             <label>Cinematics / VFX</label>
             <TagInput
-              values={draft.cinematicsVfxTeam || []}
-              setValues={(v) => setDraft(d => ({ ...d, cinematicsVfxTeam: v }))}
+              values={Array.isArray(draft.cinematicsVfxTeam) ? draft.cinematicsVfxTeam : []}
+              setValues={(v) => setDraft({ ...draft, cinematicsVfxTeam: v })}
               placeholder="Type and press Enter..."
               disabled={!editable}
-              /* enterOnly */
             />
           </div>
-        </div>
-
-        {/* Alt eylemler */}
-        <div className="grid" style={{ gridTemplateColumns: "auto auto 1fr", gap: 10, marginTop: 6 }}>
-          <button type="button" className="btn ghost" onClick={onClose}>Close</button>
-          {editable && (
-            <button
-              type="button"
-              className="btn gradient blue"
-              onClick={() => window.dispatchEvent(new CustomEvent("ggdb:credits-save-request"))}
-            >
-              Save
-            </button>
-          )}
         </div>
       </div>
     </BottomModal>

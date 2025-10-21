@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import { Bell, ShieldCheck, Search, Users, Gamepad2, ExternalLink, LogOut } from "lucide-react";
+import { Bell, ShieldCheck, Search, Users, Gamepad2, ExternalLink, LogOut, Menu } from "lucide-react";
 import API from "../../../services/api.js";
 import BG from "../../../assets/anonim.webp";
 
@@ -105,7 +105,14 @@ export default function Header({
   return (
     <header className="admin-header">
       <div className="inner">
-        {/* Sol: Başlık */}
+        {/* Sol: Burger + Başlık */}
+   <button
+     className="mobile-menu-btn icon-btn"
+    aria-label="Open sidebar"
+     onClick={() => document.dispatchEvent(new CustomEvent("ggdb:toggle-sidebar"))}
+   >
+     <Menu size={18} />
+   </button>
         <div className="header-title">
           <h1>{title}</h1>
           {subtitle && <p>{subtitle}</p>}

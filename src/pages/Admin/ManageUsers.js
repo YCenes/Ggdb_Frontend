@@ -84,6 +84,8 @@ export default function ManageUsersBootstrap() {
   const [page, setPage] = useState(1);
   const [users, setUsers] = useState([]);
   const [deletingIds, setDeletingIds] = useState(new Set());
+  const [copied, setCopied] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
 
   // Fetch
   useEffect(() => {
@@ -183,6 +185,26 @@ export default function ManageUsersBootstrap() {
         u.id === id ? { ...u, role: u.role === "Admin" ? "User" : "Admin" } : u
       )
     );
+  }
+};
+
+const copyWithBubble = async (text, key, e) => {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+
+    setCopied({ key, x: e.clientX, y: e.clientY }); // imleç noktası (viewport koordinatı)
+    setTimeout(() => setCopied(null), 1200);
+  } catch (err) {
+    console.error("copy failed:", err);
   }
 };
 
@@ -348,14 +370,30 @@ const handleToggleBan = async (user) => {
                             <span className="fw-semibold">{u.username}</span>
                             <span className="text-warning small">✳</span>
                           </div>
-                          <small className="text-secondary">{u.id}</small>
+                         <small
+                          className="text-secondary copyable"
+                          onClick={(e) => copyWithBubble(u.id, `id-${u.id}`, e)}
+                        >
+                          {u.id}
+                        </small>
                         </div>
                       </div>
                     </td>
 
                     {/* Email */}
-                    <td className="d-none d-xl-table-cell">{u.email}</td>
-
+                   <td className="d-none d-xl-table-cell position-relative">
+                      <span
+                        role="button"
+                        className="copyable"
+                        onClick={(e) => copyWithBubble(u.email, `email-${u.id}`, e)}
+                        title="E-postayı kopyala"
+                      >
+                        {u.email}
+                      </span>
+                      {copiedKey === `email-${u.id}` && (
+                        <span className="copy-bubble">Kopyalandı</span>
+                      )}
+                    </td>
                     {/* Role (tam Role başlığının altında ve ortada görünmesi için özel sınıf) */}
                     <td className="role-td">
                       <div className="role-cell">
@@ -474,6 +512,14 @@ const handleToggleBan = async (user) => {
           </div>
         </div>
       </div>
+      {copied && (
+  <div
+    className="copy-bubble-global"
+    style={{ left: copied.x, top: copied.y - 16 }}
+  >
+    Kopyalandı
+  </div>
+)}
     </div>
   );
 }

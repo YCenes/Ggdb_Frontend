@@ -12,6 +12,60 @@ import CreditsModal from "./Modals/CreditsModal";
 import BannerMediaModal from "./Modals/BannerMediaModal";
 import { getGameById, updateGameById } from "../../services/admin.api";
 
+
+
+
+
+
+
+  // ---- Helpers: "dolu" sayma
+const isNonEmptyString = (v) => typeof v === "string" && v.trim().length > 0;
+const isNonNullNumber = (v) => typeof v === "number" && Number.isFinite(v);
+const hasItems = (arr) => Array.isArray(arr) && arr.length > 0;
+
+// Metin/array alanlarını "dolu" kabul etmek için
+const nonEmpty = (v) =>
+  isNonEmptyString(v) || isNonNullNumber(v) || (Array.isArray(v) && v.length > 0);
+
+
+function calculateCompletionFields(game) {
+  if (!game) return { percent: 0, filled: 0, total: 0 };
+
+  // --- Yardımcı "dolu" sayma kuralı ---
+  const isFilled = (v) => {
+    if (v === null || v === undefined) return false;
+    if (typeof v === "string") return v.trim().length > 0;
+    if (typeof v === "number") return !isNaN(v);
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === "object") return Object.keys(v).length > 0;
+    return false;
+  };
+
+  // --- Kontrol edilecek alanları topla ---
+  const keys = Object.keys(game);
+
+  let total = 0;
+  let filled = 0;
+
+  for (const key of keys) {
+    // id veya sistem alanlarını dahil etme
+    if (["id", "_id", "completion", "completionText"].includes(key)) continue;
+
+    total++;
+    if (isFilled(game[key])) filled++;
+  }
+
+  const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
+  return { percent, filled, total };
+}
+
+
+
+
+
+
+
+
 const parseYouTubeId = (u) => {
   if (!u) return null;
   try {
@@ -184,6 +238,10 @@ export default function GameDetailAdmin() {
        
       };
 
+const comp = calculateCompletionFields(viewModel);
+viewModel.completion = comp.percent;
+viewModel.completionText = `${comp.filled}/${comp.total} fields filled`;
+
       if (alive) setGame(viewModel);
     } catch (err) {
       if (alive) setError(err?.response?.data?.message || err?.message || "Load failed");
@@ -195,6 +253,8 @@ export default function GameDetailAdmin() {
     alive = false;
   };
 }, [routeId]);
+
+
 
 
   const handlePersist = useCallback(
@@ -288,12 +348,18 @@ export default function GameDetailAdmin() {
         setSaving(true);
         setError(null);
         await updateGameById(id, dto);
-        setGame({
-         ...merged,
-         Featured_Section_Background: dto.Featured_Section_Background,
-        Poster_Image: dto.Poster_Image,
-        Poster_Video: dto.Poster_Video,
-       });
+        const after = {
+  ...merged,
+  Featured_Section_Background: dto.Featured_Section_Background,
+  Poster_Image: dto.Poster_Image,
+  Poster_Video: dto.Poster_Video,
+};
+
+const comp2 = calculateCompletionFields(after);
+after.completion = comp2.percent;
+after.completionText = `${comp2.filled}/${comp2.total} fields filled`;
+
+setGame(after);
         setIsEditing(false);
       } catch (err) {
         setError(err?.response?.data?.message || err?.message || "Save failed");
