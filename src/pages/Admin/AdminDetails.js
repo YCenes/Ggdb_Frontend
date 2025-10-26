@@ -214,6 +214,15 @@ export default function GameDetailAdmin() {
 
       const viewModel = {
         ...dto,
+        franchise:  dto.franchise  ?? dto.Franchise  ?? "",
+        director:   dto.director   ?? dto.Director   ?? "",
+        composer:   dto.composer   ?? dto.Composer   ?? "",
+        inspiredBy: dto.inspiredBy ?? dto.InspiredBy ?? "",
+        story:      dto.story      ?? dto.Story      ?? "",
+        engines:    Array.isArray(dto.engines    ?? dto.Engines)    ? (dto.engines    ?? dto.Engines)    : [],
+        soundtrack: Array.isArray(dto.soundtrack ?? dto.Soundtrack) ? (dto.soundtrack ?? dto.Soundtrack) : [],
+        cast:       Array.isArray(dto.cast       ?? dto.Cast)       ? (dto.cast       ?? dto.Cast)       : [],
+        dlcs:       Array.isArray(dto.dlcs       ?? dto.Dlcs)       ? (dto.dlcs       ?? dto.Dlcs)       : [],
         source: "IGDB",
         completion: 56,
         completionText: "56/100 fields completed",
@@ -282,6 +291,17 @@ viewModel.completionText = `${comp.filled}/${comp.total} fields filled`;
         metacriticRating: Number.isFinite(+merged.metaScore) ? +merged.metaScore : merged.metaScore ?? null,
         cover: merged.cover || null,
         video: merged.video || null,
+
+        franchise:  merged.franchise || null,
+        director:   merged.director  || null,
+        composer:   merged.MusicComposer  || null,
+        inspiredBy: merged.inspiredBy|| null,
+        story:      merged.story     || null, // Story'yi burada gönderiyoruz (ayrıca yukarıda da story var, tek olsun)
+
+        engines:    Array.isArray(merged.engines)    ? merged.engines    : [],
+        soundtrack: Array.isArray(merged.soundtrack) ? merged.soundtrack : [],
+        cast:       Array.isArray(merged.cast)       ? merged.cast       : [],
+        dlcs:       Array.isArray(merged.dlcs)       ? merged.dlcs       : [],
 
         developer: merged.developer || null,
         publisher: merged.publisher || null,

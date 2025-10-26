@@ -20,34 +20,30 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
   // modal açıldığında / data değiştiğinde normalize et
   useEffect(() => {
     const src = Array.isArray(data?.storeLinks) ? data.storeLinks : [];
-    const normalized = src.map(x => ({
-      // Backend'ten gelebilecek farklı casing'leri tek tipe indiriyoruz
+    const normalized = src.map((x) => ({
       store:  x.store  ?? x.Store  ?? "",
       domain: x.domain ?? x.Domain ?? "",
       url:    x.url    ?? x.Url    ?? "",
-      // Diğer alanlar varsa koru (id, slug, externalId vs)
+      price:  x.price ?? x.Price ?? null,
       ...x,
     }));
     setDraft({ storeLinks: normalized });
   }, [data, open]);
 
-  // Parent Save tetiklenince yakala — normalize edilmiş objeleri olduğu gibi gönderiyoruz
+  // Parent Save tetiklenince yakala
   useEffect(() => {
     const handler = () => onSave({ storeLinks: draft.storeLinks });
     window.addEventListener("ggdb:stores-save-request", handler);
     return () => window.removeEventListener("ggdb:stores-save-request", handler);
   }, [draft, onSave]);
 
-  const disabled = !editable;
-
   const updateLink = (idx, patch) => {
     setDraft((s) => {
       const next = s.storeLinks.slice();
       const merged = { ...next[idx], ...patch };
-      // ufak trim
-      if ('store'  in patch) merged.store  = (merged.store  || "").trim();
-      if ('domain' in patch) merged.domain = (merged.domain || "").trim();
-      if ('url'    in patch) merged.url    = (merged.url    || "").trim();
+      if ("store" in patch)  merged.store  = (merged.store  || "").trim();
+      if ("domain" in patch) merged.domain = (merged.domain || "").trim();
+      if ("url" in patch)    merged.url    = (merged.url    || "").trim();
       next[idx] = merged;
       return { ...s, storeLinks: next };
     });
@@ -56,7 +52,7 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
   const addLink = () => {
     setDraft((s) => ({
       ...s,
-      storeLinks: [...s.storeLinks, { store: "", domain: "", url: "" }],
+      storeLinks: [...s.storeLinks, { store: "", domain: "", url: "", price: "" }],
     }));
   };
 
@@ -71,7 +67,7 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
   return (
     <BottomModal open={open} onClose={onClose}>
       <div className="gd-form is-insheet big" style={{ gap: 16 }}>
-        {/* Başlık + sağ istatistik */}
+        {/* Başlık */}
         <div className="grid" style={{ gridTemplateColumns: "1fr", gap: 12 }}>
           <div className="col" style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <h3 style={{ margin: 0 }}>🛒 Store Links</h3>
@@ -99,7 +95,7 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
                 borderRadius: 12,
                 padding: 12,
                 display: "grid",
-                gridTemplateColumns: "1fr 1.2fr 1.8fr auto",
+                gridTemplateColumns: "1fr 1.2fr 1.8fr 0.8fr auto",
                 gap: 8,
                 alignItems: "center",
               }}
@@ -112,7 +108,7 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
                   placeholder="e.g., Steam / Epic Games / GOG"
                   value={row.store ?? ""}
                   onChange={(e) => updateLink(i, { store: e.target.value })}
-                  disabled={disabled}
+                  disabled={!editable}
                 />
               </div>
 
@@ -124,33 +120,48 @@ export default function StoreLinksModal({ open, onClose, editable, data, onSave 
                   placeholder="store.steampowered.com"
                   value={row.domain ?? ""}
                   onChange={(e) => updateLink(i, { domain: e.target.value })}
-                  disabled={disabled}
+                  disabled={!editable}
                 />
               </div>
 
               {/* URL */}
               <div>
-                <label className="gd-label">Url</label>
+                <label className="gd-label">URL</label>
                 <input
                   type="url"
                   placeholder="https://store…"
                   value={row.url ?? ""}
                   onChange={(e) => updateLink(i, { url: e.target.value })}
-                  disabled={disabled}
+                  disabled={!editable}
                 />
               </div>
 
-              {/* Sil butonu */}
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  className="btn small"
-                  onClick={() => removeLink(i)}
-                  disabled={disabled}
-                >
-                  🗑️
-                </button>
+              {/* PRICE (en sonda) */}
+              <div>
+                <label className="gd-label">Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="e.g 19.99"
+                  value={row.price ?? ""}
+                  onChange={(e) => updateLink(i, { price: e.target.value })}
+                  disabled={!editable}
+                />
               </div>
+
+              {/* Sil butonu sadece edit modunda */}
+              {editable && (
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    className="btn small"
+                    onClick={() => removeLink(i)}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
