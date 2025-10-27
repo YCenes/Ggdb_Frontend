@@ -1,5 +1,5 @@
 // src/pages/admin/modals/BannerMediaModal.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 function BottomModal({ open, onClose, children }) {
   if (!open) return null;
@@ -66,69 +66,107 @@ const parseYouTubeId = (u) => {
   return null;
 };
 
+/** ---- Kaynak etiketi (IGDB/RAWG) çıkarımı ---- */
+const getSourceLabel = (item) => {
+  const meta = item?.metaDatas || [];
+  // metaDatas içinden "source"/"provider" benzeri alanları ara
+  const found = meta.find((m) => {
+    const k = (m?.label || "").toString().toLowerCase();
+    return ["source", "provider", "origin"].includes(k);
+  });
+  let s = (found?.value || item?.source || "").toString().toLowerCase();
+
+  // Yoksa URL üzerinden tahmin
+  if (!s) {
+    const u = (item?.url || "").toLowerCase();
+    if (u.includes("igdb")) s = "igdb";
+    else if (u.includes("rawg")) s = "rawg";
+  }
+
+  if (s === "igdb") return "IGDB";
+  if (s === "rawg") return "RAWG";
+  return null; // bilinmiyorsa badge gösterme
+};
+
+const sourceClass = (label) => {
+  if (label === "IGDB") return "src-igdb";
+  if (label === "RAWG") return "src-rawg";
+  return "src-custom";
+};
+
 /** ---- Bootstrap style, controlled modal ---- */
 function GalleryPickerModal({ show, title, items, mode, onPick, onClose }) {
   // mode: "image" | "video"
-  // items: normalized array (image: {url,title,metaDatas}, video: {url,title,youTubeId,metaDatas})
+  const safeItems = Array.isArray(items) ? items : [];
+
   const body = (
     <div className="container-fluid py-3">
       <div className="row g-3 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-3 row-cols-xl-4">
-     {items.map((it, i) => {
-  const isVideo = mode === "video";
-  const ytId = isVideo ? (it.youTubeId || parseYouTubeId(it.url)) : null;
+        {safeItems.map((it, i) => {
+          const isVideo = mode === "video";
+          const ytId = isVideo ? (it.youTubeId || parseYouTubeId(it.url)) : null;
 
-  // Başlangıç kapak (yüksek çözünürlük)
-  const initialSrc = isVideo && ytId
-    ? `https://i.ytimg.com/vi/${ytId}/maxresdefault.jpg`
-    : hiRes(it.url);
+          // Başlangıç kapak (yüksek çözünürlük)
+          const initialSrc =
+            isVideo && ytId
+              ? `https://i.ytimg.com/vi/${ytId}/maxresdefault.jpg`
+              : hiRes(it.url);
 
-  return (
-    <div className="col" key={i}>
-      <div
-        className="card bg-dark border-0 shadow-sm h-100 selectable-card"
-        role="button"
-        onClick={() => onPick(it)}
-      >
-        <div className="ratio ratio-16x9 card-img-top overflow-hidden position-relative">
-          {initialSrc ? (
-            <img
-              src={initialSrc}
-              alt={it.title || (isVideo ? "Video" : "Screenshot")}
-              className="object-fit-cover gallery-thumb"
-              draggable={false}
-              onError={(e) => {
-                // maxres → sd → hq fallback
-                if (!isVideo || !ytId) return;
-                const step = e.currentTarget.getAttribute("data-step") || "0";
-                if (step === "0") {
-                  e.currentTarget.src = `https://i.ytimg.com/vi/${ytId}/sddefault.jpg`;
-                  e.currentTarget.setAttribute("data-step", "1");
-                } else if (step === "1") {
-                  e.currentTarget.src = `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
-                  e.currentTarget.setAttribute("data-step", "2");
-                }
-              }}
-            />
-          ) : (
-            <div className="d-flex align-items-center justify-content-center bg-black-50">
-              <span className="text-secondary small">No preview</span>
+          const label = getSourceLabel(it); // "IGDB" | "RAWG" | null
+
+          return (
+            <div className="col" key={i}>
+              <div
+                className="card bg-dark border-0 shadow-sm h-100 selectable-card"
+                role="button"
+                onClick={() => onPick(it)}
+              >
+                <div className="ratio ratio-16x9 card-img-top overflow-hidden position-relative">
+                  {/* BADGES (üst-sol) */}
+                  <div className="position-absolute top-0 start-0 p-2 d-flex align-items-start gap-2 z-1 badge-stack">
+                    {label && <span className={`badge badge-source ${sourceClass(label)}`}>{label}</span>}
+                    {isVideo && <span className="badge badge-kind">VIDEO</span>}
+                  </div>
+
+                  {initialSrc ? (
+                    <img
+                      src={initialSrc}
+                      alt={it.title || (isVideo ? "Video" : "Screenshot")}
+                      className="object-fit-cover gallery-thumb"
+                      draggable={false}
+                      onError={(e) => {
+                        // maxres → sd → hq fallback (sadece video için)
+                        if (!isVideo || !ytId) return;
+                        const step = e.currentTarget.getAttribute("data-step") || "0";
+                        if (step === "0") {
+                          e.currentTarget.src = `https://i.ytimg.com/vi/${ytId}/sddefault.jpg`;
+                          e.currentTarget.setAttribute("data-step", "1");
+                        } else if (step === "1") {
+                          e.currentTarget.src = `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
+                          e.currentTarget.setAttribute("data-step", "2");
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="d-flex align-items-center justify-content-center bg-black-50">
+                      <span className="text-secondary small">No preview</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="card-body py-2">
+                  <div className="text-white fw-semibold small text-truncate">
+                    {it.title || (isVideo ? "Game Trailer" : "Game Screenshot")}
+                  </div>
+                  <div className="text-secondary text-uppercase" style={{ fontSize: 11 }}>
+                    {isVideo ? "YOUTUBE" : "SCREENSHOT"}
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-
-        <div className="card-body py-2">
-          <div className="text-white fw-semibold small text-truncate">
-            {it.title || (isVideo ? "Game Trailer" : "Game Screenshot")}
-          </div>
-          <div className="text-secondary text-uppercase" style={{ fontSize: 11 }}>
-            {isVideo ? "YOUTUBE" : "SCREENSHOT"}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-})}
-        {items.length === 0 && (
+          );
+        })}
+        {safeItems.length === 0 && (
           <div className="col">
             <div className="text-secondary small">No items found.</div>
           </div>
@@ -151,19 +189,38 @@ function GalleryPickerModal({ show, title, items, mode, onPick, onClose }) {
         </div>
       </div>
       {show && <div className="modal-backdrop fade show" onClick={onClose} />}
+
       <style>{`
         .selectable-card:hover { outline: 2px solid rgba(245, 158, 11, .8); }
         .object-fit-cover { object-fit: cover; width: 100%; height: 100%; }
         .bg-black-50 { background: rgba(0,0,0,.5); }
+
+        /* Badge stilleri */
+        .badge-source {
+          font-size: 10px;
+          letter-spacing: .4px;
+          padding: .35rem .5rem;
+          border-radius: .5rem;
+          border: 1px solid rgba(255,255,255,.15);
+          backdrop-filter: blur(4px);
+        }
+        .src-igdb   { color:#111; background:#facc15; border-color:#facc15; }   /* sarı */
+        .src-rawg   { color:#fff; background:#0ea5e9; }                         /* mavi */
+        .src-custom { color:#fff; background:rgba(255,255,255,.15); }
+
+        .badge-kind {
+          font-size: 10px;
+          padding: .35rem .5rem;
+          border-radius: .5rem;
+          color:#fff; background: rgba(0,0,0,.55);
+          border: 1px solid rgba(255,255,255,.15);
+        }
       `}</style>
     </>
   );
 }
 
 export default function BannerMediaModal({ open, onClose, editable, data, onSave }) {
-
-  
-
   // Bilgi amaçlı listeler (render/grid için)
   const availableImages = data?.images || [];
   const availableVideos = data?.videos || [];
@@ -233,6 +290,7 @@ export default function BannerMediaModal({ open, onClose, editable, data, onSave
   const handlePick = (obj) => {
     if (picker.mode === "image") {
       const img = normImage(obj);
+      if (!img) return closePicker();
       if (picker.target === "featured") {
         setDraft((d)=>({...d, featuredBackground: hiRes(img.url), featuredImageObj: img}));
       } else {
@@ -240,6 +298,7 @@ export default function BannerMediaModal({ open, onClose, editable, data, onSave
       }
     } else {
       const vid = normVideo(obj);
+      if (!vid) return closePicker();
       setDraft((d)=>({...d, trailerVideo: vid.url, trailerVideoObj: vid}));
     }
     closePicker();
@@ -247,153 +306,149 @@ export default function BannerMediaModal({ open, onClose, editable, data, onSave
 
   return (
     <>
-      {/* Ana modalın kendisi hâlihazırda projectte özel bir bottom sheet ise – bunu koruyoruz */}
       <BottomModal open={open} onClose={onClose}>
-      <div className="banner-media-container">
-        {/* Header */}
-        <div className="d-flex align-items-center gap-2 px-4 pt-4 mb-4">
-          <div className="rounded bg-purple p-2 d-flex align-items-center justify-content-center" style={{width:32,height:32,background:"#8b5cf6"}}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M4 3a2 2 0 0 0-2 2v1.816a14.94 14.94 0 0 0 8 2.184 14.94 14.94 0 0 0 8-2.184V5a2 2 0 0 0-2-2H4Z"/><path d="M6.447 8.894A12.95 12.95 0 0 0 10 9c1.193 0 2.37-.071 3.553-.106L18 11v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5l4.447-2.106Z"/></svg>
-          </div>
-          <div>
-            <h2 className="m-0 fw-bold" style={{color:"var(--text)", fontSize:20}}>Banner &amp; Media Override</h2>
-            <p className="m-0 small" style={{color:"var(--muted)"}}>Customize visual elements and override game media</p>
-          </div>
-        </div>
-
-        {/* Available */}
-        <div className="px-4 mb-4">
-          <div className="d-flex align-items-center gap-2 small" style={{color:"var(--green)"}}>
-            <span className="rounded-circle" style={{width:8,height:8,background:"var(--green)"}}/>
-            <span>{(data?.images||[]).length} images + {(data?.videos||[]).length} videos available (from IGDB)</span>
-          </div>
-        </div>
-
-        {/* Featured Section Background */}
-        <div className="section-card mx-4 mb-4 p-4">
-          <div className="d-flex align-items-center justify-content-between">
-            <div className="d-flex align-items-center gap-2">
-              <span>🌟</span>
-              <h3 className="m-0 fw-bold" style={{color:"var(--amber)"}}>Featured Section Background</h3>
+        <div className="banner-media-container">
+          {/* Header */}
+          <div className="d-flex align-items-center gap-2 px-4 pt-4 mb-4">
+            <div className="rounded bg-purple p-2 d-flex align-items-center justify-content-center" style={{width:32,height:32,background:"#8b5cf6"}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M4 3a2 2 0 0 0-2 2v1.816a14.94 14.94 0 0 0 8 2.184 14.94 14.94 0 0 0 8-2.184V5a2 2 0 0 0-2-2H4Z"/><path d="M6.447 8.894A12.95 12.95 0 0 0 10 9c1.193 0 2.37-.071 3.553-.106L18 11v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5l4.447-2.106Z"/></svg>
             </div>
-            {editable && (
-              <button className="btn btn-sm btn-outline-warning" onClick={()=>openPicker("featured")}>
-                Change
-              </button>
-            )}
-          </div>
-          <p className="text-secondary small mt-2 mb-3">Background image to be used when featured on the main page</p>
-
-          <div className="position-relative rounded overflow-hidden" style={{height:240, background:"#0b1220"}}>
-            {featuredUrl ? (
-              <img src={featuredUrl} alt="Featured preview" className="w-100 h-100" style={{objectFit:"contain"}} />
-            ) : (
-              <div className="w-100 h-100" style={{background:"linear-gradient(135deg,#1e3a8a 0%,#0f766e 100%)"}}/>
-            )}
-            <div className="position-absolute top-0 start-0 m-3 badge text-bg-warning text-dark fw-semibold">🎮 Featured Override</div>
-          </div>
-        </div>
-
-        {/* Bottom two cards */}
-        <div className="row g-4 px-4 pb-4">
-          {/* Poster */}
-          <div className="col-12 col-md-6">
-            <div className="section-card p-4 h-100">
-              <div className="d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center gap-2">
-                  <span>🖼️</span>
-                  <h3 className="m-0 fw-bold" style={{color:"#06b6d4"}}>Poster Image</h3>
-                </div>
-                {editable && (
-                  <button className="btn btn-sm btn-outline-info" onClick={()=>openPicker("poster")}>
-                    Change
-                  </button>
-                )}
-              </div>
-              <p className="text-secondary small mt-2 mb-3">Poster to be used in game cards and detail pages</p>
-
-              <div className="d-flex justify-content-center mt-3">
-                <div className="shadow" style={{width:140, height:196}}>
-                  <div
-                    className="rounded-3"
-                    style={{
-                      width:"100%", height:"100%",
-                      backgroundImage: posterUrl ? `url(${posterUrl})` : "linear-gradient(180deg,#d97706 0%,#ea580c 100%)",
-                      backgroundSize:"cover", backgroundPosition:"center"
-                    }}
-                  />
-                </div>
-              </div>
+            <div>
+              <h2 className="m-0 fw-bold" style={{color:"var(--text)", fontSize:20}}>Banner &amp; Media Override</h2>
+              <p className="m-0 small" style={{color:"var(--muted)"}}>Customize visual elements and override game media</p>
             </div>
           </div>
 
-          {/* Trailer */}
-          <div className="col-12 col-md-6">
-            <div className="section-card p-4 h-100">
-              <div className="d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center gap-2">
-                  <span>🎬</span>
-                  <h3 className="m-0 fw-bold" style={{color:"var(--accent-2)"}}>Trailer / Video</h3>
+          {/* Available */}
+          <div className="px-4 mb-4">
+            <div className="d-flex align-items-center gap-2 small" style={{color:"var(--green)"}}>
+              <span className="rounded-circle" style={{width:8,height:8,background:"var(--green)"}}/>
+              <span>{(availableImages).length} images + {(availableVideos).length} videos available</span>
+            </div>
+          </div>
+
+          {/* Featured Section Background */}
+          <div className="section-card mx-4 mb-4 p-4">
+            <div className="d-flex align-items-center justify-content-between">
+              <div className="d-flex align-items-center gap-2">
+                <span>🌟</span>
+                <h3 className="m-0 fw-bold" style={{color:"var(--amber)"}}>Featured Section Background</h3>
+              </div>
+              {editable && (
+                <button className="btn btn-sm btn-outline-warning" onClick={()=>openPicker("featured")}>
+                  Change
+                </button>
+              )}
+            </div>
+            <p className="text-secondary small mt-2 mb-3">Background image to be used when featured on the main page</p>
+
+            <div className="position-relative rounded overflow-hidden" style={{height:240, background:"#0b1220"}}>
+              {featuredUrl ? (
+                <img src={featuredUrl} alt="Featured preview" className="w-100 h-100" style={{objectFit:"contain"}} />
+              ) : (
+                <div className="w-100 h-100" style={{background:"linear-gradient(135deg,#1e3a8a 0%,#0f766e 100%)"}}/>
+              )}
+              <div className="position-absolute top-0 start-0 m-3 badge text-bg-warning text-dark fw-semibold">🎮 Featured Override</div>
+            </div>
+          </div>
+
+          {/* Bottom two cards */}
+          <div className="row g-4 px-4 pb-4">
+            {/* Poster */}
+            <div className="col-12 col-md-6">
+              <div className="section-card p-4 h-100">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-2">
+                    <span>🖼️</span>
+                    <h3 className="m-0 fw-bold" style={{color:"#06b6d4"}}>Poster Image</h3>
+                  </div>
+                  {editable && (
+                    <button className="btn btn-sm btn-outline-info" onClick={()=>openPicker("poster")}>
+                      Change
+                    </button>
+                  )}
                 </div>
-                {editable && (
-                  <button className="btn btn-sm btn-outline-danger" onClick={()=>openPicker("trailer")}>
-                    Change
-                  </button>
-                )}
-              </div>
-              <p className="text-secondary small mt-2 mb-3">Game trailer or gameplay footage</p>
+                <p className="text-secondary small mt-2 mb-3">Poster to be used in game cards and detail pages</p>
 
-              <div className="small mb-2" style={{color:"var(--green)"}}>
-                🎥 {(data?.videos || []).length} videos available (from IGDB)
+                <div className="d-flex justify-content-center mt-3">
+                  <div className="shadow" style={{width:140, height:196}}>
+                    <div
+                      className="rounded-3"
+                      style={{
+                        width:"100%", height:"100%",
+                        backgroundImage: posterUrl ? `url(${posterUrl})` : "linear-gradient(180deg,#d97706 0%,#ea580c 100%)",
+                        backgroundSize:"cover", backgroundPosition:"center"
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
+            </div>
 
-              <div className="position-relative rounded overflow-hidden" style={{height:160, background:"#0b1220"}}>
-                {ytId && (
-                  <img
-                    className="w-100 h-100"
-                    style={{objectFit:"contain"}}
-                    src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`}
-                    alt="Trailer thumbnail"
-                    onError={(e) => {
-                      if (ytId && e.currentTarget.dataset.fallback !== "1") {
-                        e.currentTarget.dataset.fallback = "1";
-                        e.currentTarget.src = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
-                      }
-                    }}
-                  />
-                )}
-                <div className="position-absolute top-50 start-50 translate-middle rounded-circle d-flex align-items-center justify-content-center" style={{width:36,height:36,background:"#dc2626",boxShadow:"0 4px 12px rgba(0,0,0,.3)"}}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+            {/* Trailer */}
+            <div className="col-12 col-md-6">
+              <div className="section-card p-4 h-100">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-2">
+                    <span>🎬</span>
+                    <h3 className="m-0 fw-bold" style={{color:"var(--accent-2)"}}>Trailer / Video</h3>
+                  </div>
+                  {editable && (
+                    <button className="btn btn-sm btn-outline-danger" onClick={()=>openPicker("trailer")}>
+                      Change
+                    </button>
+                  )}
+                </div>
+                <p className="text-secondary small mt-2 mb-3">Game trailer or gameplay footage</p>
+
+                <div className="small mb-2" style={{color:"var(--green)"}}>
+                  🎥 {availableVideos.length} videos available
+                </div>
+
+                <div className="position-relative rounded overflow-hidden" style={{height:160, background:"#0b1220"}}>
+                  {ytId && (
+                    <img
+                      className="w-100 h-100"
+                      style={{objectFit:"contain"}}
+                      src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`}
+                      alt="Trailer thumbnail"
+                      onError={(e) => {
+                        if (ytId && e.currentTarget.dataset.fallback !== "1") {
+                          e.currentTarget.dataset.fallback = "1";
+                          e.currentTarget.src = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+                        }
+                      }}
+                    />
+                  )}
+                  <div className="position-absolute top-50 start-50 translate-middle rounded-circle d-flex align-items-center justify-content-center" style={{width:36,height:36,background:"#dc2626",boxShadow:"0 4px 12px rgba(0,0,0,.3)"}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Picker modal */}
-      <GalleryPickerModal
-        show={picker.show}
-        title={picker.title}
-        items={(picker.mode === "image" ? availableImages.map(normImage) : availableVideos.map(normVideo))}
-        mode={picker.mode}
-        onPick={handlePick}
-        onClose={closePicker}
-      />
+          {/* Picker modal */}
+          <GalleryPickerModal
+            show={picker.show}
+            title={picker.title}
+            items={(picker.mode === "image" ? availableImages.map(normImage).filter(Boolean) : availableVideos.map(normVideo).filter(Boolean))}
+            mode={picker.mode}
+            onPick={handlePick}
+            onClose={closePicker}
+          />
+        </div>
+
+        {/* small local styles used by this component */}
+        <style>{`
+          .section-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--card-radius);
+            box-shadow: var(--shadow);
+          }
+        `}</style>
       </BottomModal>
-
-      {/* small local styles used by this component */}
-      <style>{`
-        .section-card {
-          background: var(--panel);
-          border: 1px solid var(--line);
-          border-radius: var(--card-radius);
-          box-shadow: var(--shadow);
-        }
-        
-      `}</style>
-
-      
     </>
   );
 }

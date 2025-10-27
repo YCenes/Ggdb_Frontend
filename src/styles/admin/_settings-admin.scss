@@ -1,0 +1,192 @@
+.settings-page {
+  min-height: 100vh;
+  background: #0b0f17;
+  color: #fff;
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,.06) 1px, transparent 1px),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  padding-bottom: 4rem;
+
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: #151b26;
+      color: rgba(255,255,255,0.8);
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        color: #fff;
+        border-color: rgba(255,255,255,0.25);
+      }
+
+      &.active {
+        background: #facc15;
+        color: #000;
+        border-color: #facc15;
+      }
+    }
+  }
+
+  .settings-card {
+    background: rgba(14,18,26,0.9);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.05);
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.2rem;
+      margin-bottom: 1.2rem;
+
+      svg {
+        color: #facc15;
+      }
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 1rem 0;
+
+      &:first-child {
+        border-top: none;
+      }
+
+      label {
+        font-weight: 500;
+      }
+
+      small {
+        display: block;
+        color: rgba(255,255,255,0.5);
+        margin-top: 4px;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      textarea,
+      select {
+        width: 100%;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: #fff;
+        padding: 10px 14px;
+        outline: none;
+        transition: border-color 0.2s;
+
+        &:focus {
+          border-color: #facc15;
+        }
+
+        &::placeholder {
+          color: rgba(255,255,255,0.3);
+        }
+      }
+
+      textarea {
+        resize: none;
+      }
+
+      .toggle {
+        width: 48px;
+        height: 24px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 999px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s;
+
+        &::after {
+          content: "";
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          background: #0b0f17;
+          border-radius: 50%;
+          top: 2px;
+          left: 2px;
+          transition: transform 0.25s;
+        }
+
+        &.active {
+          background: #facc15;
+
+          &::after {
+            transform: translateX(24px);
+          }
+        }
+      }
+
+      .file-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #1b2331;
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 8px 14px;
+        border-radius: 10px;
+        color: #fff;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          border-color: #facc15;
+        }
+
+        svg {
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+  }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 1.5rem;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+
+      &.reset {
+        background: #1b2331;
+        color: #fff;
+
+        &:hover {
+          border: 1px solid #facc15;
+        }
+      }
+
+      &.save {
+        background: #facc15;
+        color: #000;
+      }
+    }
+  }
+}

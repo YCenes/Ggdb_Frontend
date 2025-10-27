@@ -12,7 +12,7 @@
   --accent: #6ca8ff;
   --accent-2: #a78bfa;
   --green: #22c55e;
-  --amber: #f59e0b;
+  --amber: #f59e0b;   
   --danger: #ef4444;
   --card-radius: 14px;
   --shadow: 0 10px 30px rgba(0,0,0,.35);
@@ -440,4 +440,40 @@
 .chip-x:hover {
   background: #2a3a57;
   color: #fff;
+}
+
+/* --- Badge stack: ratio içinde esneme/uzama fix --- */
+.bm-sheet .badge-stack {
+  display: flex;
+  align-items: flex-start;    /* esnemeyi kapat */
+  gap: 6px;
+}
+
+/* Bootstrap badge’in esnemesini kesin */
+.bm-sheet .badge-source,
+.bm-sheet .badge-kind {
+  align-self: flex-start;     /* tek tek de sabitle */
+  height: auto !important;    /* olası 100% mirasını ez */
+  line-height: 1;             /* dikey kompakt */
+  padding: 6px 10px;          /* küçük oval */
+  border-radius: 9999px;
+  border: 1px solid rgba(255,255,255,.14);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Renk varyantları (istersen olduğu gibi kullan) */
+.bm-sheet .src-igdb { background: linear-gradient(180deg, rgba(250,204,21,.95), rgba(250,204,21,.78)); border-color: rgba(250,204,21,.9); color:#111; }
+.bm-sheet .src-rawg { background: linear-gradient(180deg, rgba(14,165,233,.95), rgba(14,165,233,.78)); border-color: rgba(14,165,233,.9); color:#fff; }
+.bm-sheet .src-custom { background: linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,.10)); border-color: rgba(255,255,255,.18); }
+
+/* İsteğe bağlı: Bootstrap değişkenlerini de küçült (opsiyonel) */
+.bm-sheet {
+  --bs-badge-font-size: 0.70rem;
+  --bs-badge-padding-y: .28rem;
+  --bs-badge-padding-x: .55rem;
+  --bs-badge-border-radius: 9999px;
 }

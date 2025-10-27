@@ -25,6 +25,7 @@ import ManageGame from "./pages/Admin/ManageGame.js";
 import GameDetailAdmin from "./pages/Admin/AdminDetails.js";
 import ManageUsers from "./pages/Admin/ManageUsers.js";
 import SystemLogs from "./pages/Admin/SystemLogs.js";
+import AdminSettings from "./pages/Admin/AdminSetting.js";
 
 
 function App() {
@@ -55,6 +56,7 @@ function App() {
              <Route path="game/:id" element={<GameDetailAdmin />} />
              <Route path="users" element={<ManageUsers />} />
              <Route path="logs" element={<SystemLogs />} />
+              <Route path="settings" element={<AdminSettings />} />
           </Route>
 
           {/* 404 */}
