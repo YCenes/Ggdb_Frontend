@@ -165,6 +165,23 @@ function normalizeGallery(dto) {
   };
 }
 
+// DLC normalizasyonu: string | {name, price} -> {name, price}
+const normalizeDlcs = (src) => {
+  const raw = src?.dlcs ?? src?.Dlcs ?? [];
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((x) => {
+      if (!x) return null;
+      if (typeof x === "string") return { name: x.trim(), price: null };
+      const name = x.name ?? x.Name ?? "";
+      const priceRaw = x.price ?? x.Price ?? null;
+      const price = (priceRaw === "" || priceRaw === null || priceRaw === undefined)
+        ? null
+        : Number.isFinite(+priceRaw) ? +priceRaw : null;
+      return name?.trim() ? { name: name.trim(), price } : null;
+    })
+    .filter(Boolean);
+};
 
 
 
@@ -222,7 +239,7 @@ export default function GameDetailAdmin() {
         engines:    Array.isArray(dto.engines    ?? dto.Engines)    ? (dto.engines    ?? dto.Engines)    : [],
         soundtrack: Array.isArray(dto.soundtrack ?? dto.Soundtrack) ? (dto.soundtrack ?? dto.Soundtrack) : [],
         cast:       Array.isArray(dto.cast       ?? dto.Cast)       ? (dto.cast       ?? dto.Cast)       : [],
-        dlcs:       Array.isArray(dto.dlcs       ?? dto.Dlcs)       ? (dto.dlcs       ?? dto.Dlcs)       : [],
+        dlcs:       normalizeDlcs(dto),
         source: "IGDB",
         completion: 56,
         completionText: "56/100 fields completed",
@@ -301,7 +318,20 @@ viewModel.completionText = `${comp.filled}/${comp.total} fields filled`;
         engines:    Array.isArray(merged.engines)    ? merged.engines    : [],
         soundtrack: Array.isArray(merged.soundtrack) ? merged.soundtrack : [],
         cast:       Array.isArray(merged.cast)       ? merged.cast       : [],
-        dlcs:       Array.isArray(merged.dlcs)       ? merged.dlcs       : [],
+         dlcs: Array.isArray(merged.dlcs)
+        ? merged.dlcs
+        .map((x) => {
+          if (!x) return null;
+          if (typeof x === "string") return { name: x.trim(), price: null };
+          const name = (x.name ?? x.Name ?? "").trim();
+          const pr = x.price ?? x.Price;
+          const price = (pr === "" || pr === null || pr === undefined)
+            ? null
+            : Number.isFinite(+pr) ? +pr : null;
+          return name ? { name, price } : null;
+        })
+        .filter(Boolean)
+        : [],
 
         developer: merged.developer || null,
         publisher: merged.publisher || null,

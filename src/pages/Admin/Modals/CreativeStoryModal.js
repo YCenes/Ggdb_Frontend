@@ -24,6 +24,28 @@ function Section({ emoji, title }) {
   );
 }
 
+const toMoney = (v) => (v === null || v === undefined || v === "") ? "" : String(v);
+const parseMoney = (s) => {
+  if (s === "" || s === null || s === undefined) return null;
+  const n = Number(String(s).replace(",", ".").trim());
+  return Number.isFinite(n) ? n : null;
+};
+
+const normalizeDlcsLocal = (src) => {
+  const arr = Array.isArray(src?.dlcs ?? src?.Dlcs) ? (src.dlcs ?? src.Dlcs) : [];
+  return arr
+    .map((x) => {
+      if (!x) return null;
+      if (typeof x === "string") return { name: x.trim(), price: null };
+      const name = (x.name ?? x.Name ?? "").trim();
+      const pr = x.price ?? x.Price;
+      const price = (pr === "" || pr === null || pr === undefined) ? null : (Number.isFinite(+pr) ? +pr : null);
+      return name ? { name, price } : null;
+    })
+    .filter(Boolean);
+};
+
+
 /**
  * İstenen alanlar:
  * Franchise (string)
@@ -47,7 +69,7 @@ export default function CreativeStoryModal({ open, onClose, editable, data, onSa
     engines:    Array.isArray(src.engines    ?? src.Engines)    ? (src.engines    ?? src.Engines)    : [],
     soundtrack: Array.isArray(src.soundtrack ?? src.Soundtrack) ? (src.soundtrack ?? src.Soundtrack) : [],
     cast:       Array.isArray(src.cast       ?? src.Cast)       ? (src.cast       ?? src.Cast)       : [],
-    dlcs:       Array.isArray(src.dlcs       ?? src.Dlcs)       ? (src.dlcs       ?? src.Dlcs)       : [],
+    dlcs:       normalizeDlcsLocal(src),
   });
 
   const [draft, setDraft] = useState(makeDraft(data));
@@ -81,6 +103,8 @@ export default function CreativeStoryModal({ open, onClose, editable, data, onSa
     }),
     [draft, editable]
   );
+
+  
 
   return (
     <BottomModal open={open} onClose={onClose}>
@@ -140,17 +164,73 @@ export default function CreativeStoryModal({ open, onClose, editable, data, onSa
         </div>
 
         {/* DLCs (List<string>) */}
-        <Section emoji="🧩" title="DLCs" />
-        <div className="grid" style={{ gridTemplateColumns: "1fr", gap: 16 }}>
-          <div className="col">
-            <TagInput
-              values={Array.isArray(draft.dlcs) ? draft.dlcs : []}
-              setValues={(v) => setDraft({ ...draft, dlcs: v })}
-              placeholder="DLC name… (Enter)"
-              disabled={disabled}
-            />
-          </div>
-        </div>
+        {/* DLCs (List<{name, price}> ) */}
+ <Section emoji="🧩" title="DLCs" />
+ <div className="grid" style={{ gridTemplateColumns: "1fr", gap: 12 }}>
+   <div className="col">
+     {(!draft.dlcs || draft.dlcs.length === 0) && !editable && (
+       <div className="muted">-</div>
+     )}
+     {Array.isArray(draft.dlcs) && draft.dlcs.length > 0 && (
+      <div className="table-like" style={{ display: "grid", gridTemplateColumns: "1fr 140px 40px", gap: 8, alignItems: "center" }}>
+         {/* Header */}
+         <div className="muted" style={{ fontSize: 12 }}>Name</div>
+         <div className="muted" style={{ fontSize: 12 }}>Price</div>
+         <div />
+         {/* Rows */}
+         {draft.dlcs.map((row, idx) => (
+           <React.Fragment key={idx}>
+             <input
+               placeholder="DLC name"
+               value={row.name}
+               readOnly={!editable}
+               onChange={(e) => {
+                 const v = e.target.value;
+                 const next = [...draft.dlcs];
+                 next[idx] = { ...next[idx], name: v };
+                 setDraft({ ...draft, dlcs: next });
+               }}
+             />
+             <input
+               placeholder="e.g. 9.99"
+               value={toMoney(row.price)}
+               readOnly={!editable}
+               onChange={(e) => {
+                 const next = [...draft.dlcs];
+                 next[idx] = { ...next[idx], price: parseMoney(e.target.value) };
+                 setDraft({ ...draft, dlcs: next });
+               }}
+             />
+             {editable ? (
+               <button
+                 type="button"
+                 className="btn danger"
+                 title="Remove"
+                 onClick={() => {
+                   const next = draft.dlcs.filter((_, i) => i !== idx);
+                   setDraft({ ...draft, dlcs: next });
+                 }}
+               >
+                 🗑
+               </button>
+             ) : <div />}
+           </React.Fragment>
+         ))}
+       </div>
+     )}
+     {editable && (
+       <div style={{ marginTop: 10 }}>
+         <button
+           type="button"
+           className="btn ghost"
+           onClick={() => setDraft({ ...draft, dlcs: [...(draft.dlcs || []), { name: "", price: null }] })}
+         >
+           ➕ Add DLC
+         </button>
+       </div>
+     )}
+   </div>
+ </div>
 
         {/* Story */}
         <Section emoji="📖" title="Story" />
