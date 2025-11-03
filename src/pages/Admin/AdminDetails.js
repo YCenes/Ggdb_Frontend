@@ -10,6 +10,7 @@ import StoreLinksModal from "./Modals/StoreLinksModal";
 import MediaModal from "./Modals/MediaModal";
 import CreditsModal from "./Modals/CreditsModal";
 import BannerMediaModal from "./Modals/BannerMediaModal";
+import ReviewsAdminModal from "./Modals/ReviewsAdminModal";
 import { getGameById, updateGameById } from "../../services/admin.api";
 
 
@@ -203,13 +204,17 @@ export default function GameDetailAdmin() {
   const [openMedia, setOpenMedia] = useState(false);
   const [openCredits, setOpenCredits] = useState(false);
   const [openBanner, setOpenBanner] = useState(false);
+  const [openReviews, setOpenReviews] = useState(false);
+
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
  
 
  
-
+const adminUserId = typeof window !== "undefined"
+  ? (window.__CURRENT_USER?.id || localStorage.getItem("userId") || null)
+  : null;
   
 
   useEffect(() => {
@@ -455,7 +460,7 @@ setGame(after);
     { key: "stores", label: "Store Links", open: () => setOpenStores(true) },
     { key: "media", label: "Media", open: () => setOpenMedia(true) },
     { key: "credits", label: "Credits", open: () => setOpenCredits(true) },
-    { key: "review", label: "Review" },
+    { key: "review", label: "Review", open: () => setOpenReviews(true) },
     { key: "trivia", label: "Trivia" },
     { key: "banner", label: "Banner / Trailer", open: () => setOpenBanner(true) },
   ];
@@ -528,6 +533,7 @@ setGame(after);
                     setOpenMedia(false);
                     setOpenCredits(false);
                     setOpenBanner(false);
+                    setOpenReviews(false);
                     break;
                   case "awards":
                     setOpenAwards(true);
@@ -539,6 +545,7 @@ setGame(after);
                     setOpenMedia(false);
                     setOpenCredits(false);
                     setOpenBanner(false);
+                    setOpenReviews(false);
                     break;
                   case "system":
                     setOpenSystem(true);
@@ -550,6 +557,7 @@ setGame(after);
                     setOpenMedia(false);
                     setOpenCredits(false);
                     setOpenBanner(false);
+                    setOpenReviews(false);
                     break;
                   case "languages":
                     setOpenLanguages(true);
@@ -561,6 +569,7 @@ setGame(after);
                     setOpenMedia(false);
                     setOpenCredits(false);
                     setOpenBanner(false);
+                    setOpenReviews(false);
                     break;
                   case "stores":
                     setOpenStores(true);
@@ -572,6 +581,7 @@ setGame(after);
                     setOpenMedia(false);
                     setOpenCredits(false);
                     setOpenBanner(false);
+                    setOpenReviews(false);
                     break;
                   case "media":
                     setOpenMedia(true);
@@ -583,6 +593,7 @@ setGame(after);
                     setOpenStores(false);
                     setOpenCredits(false);
                     setOpenBanner(false);
+                    setOpenReviews(false);
                     break;
 
                   case "credits":
@@ -595,6 +606,7 @@ setGame(after);
                     setOpenStores(false);
                     setOpenMedia(false);
                     setOpenBanner(false);
+                    setOpenReviews(false);
                     break;
                   case "banner":
                     setOpenBanner(true);
@@ -606,6 +618,19 @@ setGame(after);
                     setOpenStores(false);
                     setOpenMedia(false);
                     setOpenCredits(false);
+                    setOpenReviews(false);
+                    break;
+                    case "review":
+                    setOpenReviews(true);
+                    setOpenOverview(false);
+                    setOpenCreative(false);
+                    setOpenAwards(false);
+                    setOpenSystem(false);
+                    setOpenLanguages(false);
+                    setOpenStores(false);
+                    setOpenMedia(false);
+                    setOpenCredits(false);
+                    setOpenBanner(false);
                     break;
                   default:
                     setOpenOverview(true);
@@ -617,6 +642,7 @@ setGame(after);
                     setOpenMedia(false);
                     setOpenCredits(false);
                     setOpenBanner(false);
+                    setOpenReviews(false);
                     break;
                 }
                 setIsEditing(true);
@@ -624,47 +650,44 @@ setGame(after);
               disabled={saving}
             >
               {`✏️ Edit ${
-                activeTab === "creative"
-                  ? "Creative & Story"
-                  : activeTab === "awards"
-                  ? "Awards"
-                  : activeTab === "system"
-                  ? "System"
-                  : activeTab === "languages"
-                  ? "Languages"
-                  : activeTab === "stores"
-                  ? "Store Links"
-                  : activeTab === "media"
-                  ? "Media"
-                  : activeTab === "credits"
-                  ? "Credits"
-                  : activeTab === "banner"
-                  ? "Banner"
-                  : "Overview"
-              }`}
+              activeTab === "creative" ? "Creative & Story"
+              : activeTab === "awards" ? "Awards"
+              : activeTab === "system" ? "System"
+              : activeTab === "languages" ? "Languages"
+              : activeTab === "stores" ? "Store Links"
+              : activeTab === "media" ? "Media"
+              : activeTab === "credits" ? "Credits"
+              : activeTab === "banner" ? "Banner"
+              : activeTab === "review" ? "Reviews"
+              : "Overview"
+            }`}
+
             </button>
           ) : (
             <button
               className="btn success"
               onClick={() => {
                 const evName =
-                  activeTab === "creative"
-                    ? "ggdb:creative-save-request"
-                    : activeTab === "awards"
-                    ? "ggdb:awards-save-request"
-                    : activeTab === "system"
-                    ? "ggdb:system-save-request"
-                    : activeTab === "languages"
-                    ? "ggdb:languages-save-request"
-                    : activeTab === "stores"
-                    ? "ggdb:stores-save-request"
-                    : activeTab === "media"
-                    ? "ggdb:media-save-request"
-                    : activeTab === "credits"
-                    ? "ggdb:credits-save-request"
-                    : activeTab === "banner"
-                    ? "ggdb:banner-save-request"
-                    : "ggdb:overview-save-request";
+              activeTab === "creative"
+                ? "ggdb:creative-save-request"
+              : activeTab === "awards"
+                ? "ggdb:awards-save-request"
+              : activeTab === "system"
+                ? "ggdb:system-save-request"
+              : activeTab === "languages"
+                ? "ggdb:languages-save-request"
+              : activeTab === "stores"
+                ? "ggdb:stores-save-request"
+              : activeTab === "media"
+                ? "ggdb:media-save-request"
+              : activeTab === "credits"
+                ? "ggdb:credits-save-request"
+              : activeTab === "banner"
+                ? "ggdb:banner-save-request"
+            : activeTab === "review"
+              ? "ggdb:reviews-save-request"
+              : "ggdb:overview-save-request";
+
                 window.dispatchEvent(new CustomEvent(evName));
                 setIsEditing(false);
               }}
@@ -694,6 +717,7 @@ setGame(after);
               setOpenMedia(false);
               setOpenCredits(false);
               setOpenBanner(false);
+              setOpenReviews(false);
 
               if (t.open) t.open();
               setIsEditing(false);
@@ -726,6 +750,14 @@ setGame(after);
   data={game}
   onSave={handlePersist}
 />
+<ReviewsAdminModal
+  open={openReviews}
+  onClose={() => setOpenReviews(false)}
+  editable={isEditing}
+  gameId={game.id}
+  adminUserId={adminUserId}
+/>
+
     </div>
   );
 }
