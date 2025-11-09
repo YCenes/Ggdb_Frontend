@@ -14,14 +14,14 @@ function BottomModal({ open, onClose, children }) {
 }
 
 export default function AwardsModal({ open, onClose, editable, data, onSave }) {
-  // data.awards: string[]
+  // 🏆 data.awards: AwardInfo[]
   const [draft, setDraft] = useState({ awards: data?.awards || [] });
 
   useEffect(() => {
     setDraft({ awards: data?.awards || [] });
   }, [data, open]);
 
-  // parent save event
+  // parent save event (GGDB admin save tuşu)
   useEffect(() => {
     const handler = () => onSave({ awards: draft.awards });
     window.addEventListener("ggdb:awards-save-request", handler);
@@ -30,23 +30,28 @@ export default function AwardsModal({ open, onClose, editable, data, onSave }) {
 
   const addAward = () => {
     if (!editable) return;
-    setDraft((d) => ({ awards: [...(d.awards || []), ""] }));
+    setDraft((d) => ({
+      awards: [
+        ...(d.awards || []),
+        { title: "", category: "", result: "", year: "" },
+      ],
+    }));
   };
 
-  const setRow = (i, value) => {
+  const setField = (index, key, value) => {
     if (!editable) return;
     setDraft((d) => {
       const arr = [...(d.awards || [])];
-      arr[i] = value;
+      arr[index] = { ...arr[index], [key]: value };
       return { awards: arr };
     });
   };
 
-  const removeRow = (i) => {
+  const removeRow = (index) => {
     if (!editable) return;
     setDraft((d) => {
       const arr = [...(d.awards || [])];
-      arr.splice(i, 1);
+      arr.splice(index, 1);
       return { awards: arr };
     });
   };
@@ -55,21 +60,50 @@ export default function AwardsModal({ open, onClose, editable, data, onSave }) {
     <BottomModal open={open} onClose={onClose}>
       <div className="gd-form is-insheet big">
         <h3>🏆 Awards</h3>
+
         <div className="award-list">
           {(draft.awards || []).length > 0 ? (
             draft.awards.map((aw, i) =>
               editable ? (
-                <div key={i} className="award-row">
+                <div key={i} className="award-row readonly">
                   <input
-                    value={aw}
-                    placeholder="Award name"
-                    onChange={(e) => setRow(i, e.target.value)}
+                    value={aw.title || ""}
+                    placeholder="Title"
+                    onChange={(e) => setField(i, "title", e.target.value)}
+                    style={{ flex: 2 }}
                   />
-                  <button className="icon-btn danger" onClick={() => removeRow(i)}>🗑️</button>
+                  <input
+                    value={aw.category || ""}
+                    placeholder="Category"
+                    onChange={(e) => setField(i, "category", e.target.value)}
+                    style={{ flex: 2 }}
+                  />
+                  <input
+                    value={aw.result || ""}
+                    placeholder="Result"
+                    onChange={(e) => setField(i, "result", e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <input
+                    type="number"
+                    value={aw.year || ""}
+                    placeholder="Year"
+                    onChange={(e) => setField(i, "year", e.target.value)}
+                    style={{ width: 90 }}
+                  />
+                  <button
+                    className="icon-btn danger"
+                    onClick={() => removeRow(i)}
+                  >
+                    🗑️
+                  </button>
                 </div>
               ) : (
                 <div key={i} className="award-row readonly">
-                  {aw || "—"}
+                  <span style={{ flex: 2 }}>{aw.title}</span>
+                  <span style={{ flex: 2 }}>{aw.category || "—"}</span>
+                  <span style={{ flex: 1 }}>{aw.result || "—"}</span>
+                  <span style={{ width: 80 }}>{aw.year || "—"}</span>
                 </div>
               )
             )
@@ -77,9 +111,12 @@ export default function AwardsModal({ open, onClose, editable, data, onSave }) {
             <div className="empty-row">No awards</div>
           )}
         </div>
+
         {editable && (
           <div style={{ marginTop: 16 }}>
-            <button className="btn primary" onClick={addAward}>+ Add Award</button>
+            <button className="btn primary" onClick={addAward}>
+              + Add Award
+            </button>
           </div>
         )}
       </div>

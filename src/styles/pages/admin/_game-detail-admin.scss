@@ -633,3 +633,128 @@
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* =======================
+   Awards Editor (Admin Modal)
+   ======================= */
+
+.award-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 4px 2px;
+  max-height: 60vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #0c1322;
+}
+
+/* Tek satır (editable view) */
+.award-row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 90px auto;
+  gap: 10px;
+  align-items: center;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.award-row:hover {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.award-row input {
+  width: 100%;
+  background: #0b1220;
+  border: 1px solid #1e2638;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #e8eef8;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+.award-row input:focus {
+  border-color: #3b82f6;
+  outline: none;
+}
+
+.award-row input::placeholder {
+  color: #94a3b8;
+  opacity: 0.8;
+}
+
+/* Silme butonu */
+.award-row .icon-btn.danger {
+  background: #7f1d1d;
+  border: 1px solid #991b1b;
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.1s;
+}
+.award-row .icon-btn.danger:hover {
+  background: #b91c1c;
+  transform: scale(1.05);
+}
+
+/* Başlık */
+.gd-form h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* Boş durum */
+.empty-row {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 20px 0;
+  border: 1px dashed #334155;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+/* Ekle butonu */
+.btn.primary {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  border: 1px solid #2563eb;
+  color: #fff;
+  font-weight: 700;
+  transition: background 0.2s, transform 0.1s;
+}
+.btn.primary:hover {
+  background: linear-gradient(90deg, #60a5fa, #3b82f6);
+  transform: translateY(-1px);
+}
+
+/* Readonly görünüm */
+.award-row.readonly {
+  grid-template-columns: 2fr 2fr 1fr 90px;
+  background: #0e1522;
+  border: 1px solid #1e2638;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.award-row.readonly span {
+  font-size: 14px;
+  color: #d1d5db;
+}
+.award-row.readonly span:nth-child(1) {
+  font-weight: 600;
+  color: #e8eef8;
+}
