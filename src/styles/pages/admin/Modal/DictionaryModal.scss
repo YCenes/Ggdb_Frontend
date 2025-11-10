@@ -1,0 +1,37 @@
+
+
+.bm-sheet {
+  .gd-form {
+    label {
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    input {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--text);
+      width: 100%;
+      font-size: 14px;
+      transition: border 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .gd-subtext {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+  }
+}

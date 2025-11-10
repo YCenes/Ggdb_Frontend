@@ -11,6 +11,8 @@ import MediaModal from "./Modals/MediaModal";
 import CreditsModal from "./Modals/CreditsModal";
 import BannerMediaModal from "./Modals/BannerMediaModal";
 import ReviewsAdminModal from "./Modals/ReviewsAdminModal";
+import DictionaryModal from "./Modals/DictionaryModal";
+
 import { getGameById, updateGameById } from "../../services/admin.api";
 
 
@@ -205,6 +207,8 @@ export default function GameDetailAdmin() {
   const [openCredits, setOpenCredits] = useState(false);
   const [openBanner, setOpenBanner] = useState(false);
   const [openReviews, setOpenReviews] = useState(false);
+  const [openDictionary, setOpenDictionary] = useState(false);
+
 
 
   const [isEditing, setIsEditing] = useState(false);
@@ -313,6 +317,7 @@ viewModel.completionText = `${comp.filled}/${comp.total} fields filled`;
         metacriticRating: Number.isFinite(+merged.metaScore) ? +merged.metaScore : merged.metaScore ?? null,
         cover: merged.cover || null,
         video: merged.video || null,
+        dictionary: Array.isArray(merged.dictionary) ? merged.dictionary : [],
 
         franchise:  merged.franchise || null,
         director:   merged.director  || null,
@@ -460,6 +465,7 @@ setGame(after);
     { key: "stores", label: "Store Links", open: () => setOpenStores(true) },
     { key: "media", label: "Media", open: () => setOpenMedia(true) },
     { key: "credits", label: "Credits", open: () => setOpenCredits(true) },
+    { key: "dictionary", label: "Dictionary", open: () => setOpenDictionary(true) },
     { key: "review", label: "Review", open: () => setOpenReviews(true) },
     { key: "trivia", label: "Trivia" },
     { key: "banner", label: "Banner / Trailer", open: () => setOpenBanner(true) },
@@ -534,6 +540,7 @@ setGame(after);
                     setOpenCredits(false);
                     setOpenBanner(false);
                     setOpenReviews(false);
+                    setOpenDictionary(false);
                     break;
                   case "awards":
                     setOpenAwards(true);
@@ -546,6 +553,7 @@ setGame(after);
                     setOpenCredits(false);
                     setOpenBanner(false);
                     setOpenReviews(false);
+                    setOpenDictionary(false);
                     break;
                   case "system":
                     setOpenSystem(true);
@@ -558,6 +566,7 @@ setGame(after);
                     setOpenCredits(false);
                     setOpenBanner(false);
                     setOpenReviews(false);
+                    setOpenDictionary(false);
                     break;
                   case "languages":
                     setOpenLanguages(true);
@@ -570,6 +579,7 @@ setGame(after);
                     setOpenCredits(false);
                     setOpenBanner(false);
                     setOpenReviews(false);
+                    setOpenDictionary(false);
                     break;
                   case "stores":
                     setOpenStores(true);
@@ -582,6 +592,7 @@ setGame(after);
                     setOpenCredits(false);
                     setOpenBanner(false);
                     setOpenReviews(false);
+                    setOpenDictionary(false);
                     break;
                   case "media":
                     setOpenMedia(true);
@@ -594,6 +605,7 @@ setGame(after);
                     setOpenCredits(false);
                     setOpenBanner(false);
                     setOpenReviews(false);
+                    setOpenDictionary(false);
                     break;
 
                   case "credits":
@@ -607,6 +619,7 @@ setGame(after);
                     setOpenMedia(false);
                     setOpenBanner(false);
                     setOpenReviews(false);
+                    setOpenDictionary(false);
                     break;
                   case "banner":
                     setOpenBanner(true);
@@ -619,6 +632,7 @@ setGame(after);
                     setOpenMedia(false);
                     setOpenCredits(false);
                     setOpenReviews(false);
+                    setOpenDictionary(false);
                     break;
                     case "review":
                     setOpenReviews(true);
@@ -631,6 +645,20 @@ setGame(after);
                     setOpenMedia(false);
                     setOpenCredits(false);
                     setOpenBanner(false);
+                    setOpenDictionary(false);
+                    break;
+                    case "dictionary":
+                    setOpenDictionary(true);
+                    setOpenOverview(false);
+                    setOpenCreative(false);
+                    setOpenAwards(false);
+                    setOpenSystem(false);
+                    setOpenLanguages(false);
+                    setOpenStores(false);
+                    setOpenMedia(false);
+                    setOpenCredits(false);
+                    setOpenBanner(false);
+                    setOpenReviews(false);
                     break;
                   default:
                     setOpenOverview(true);
@@ -643,6 +671,7 @@ setGame(after);
                     setOpenCredits(false);
                     setOpenBanner(false);
                     setOpenReviews(false);
+                    setOpenDictionary(false);
                     break;
                 }
                 setIsEditing(true);
@@ -659,6 +688,7 @@ setGame(after);
               : activeTab === "credits" ? "Credits"
               : activeTab === "banner" ? "Banner"
               : activeTab === "review" ? "Reviews"
+              : activeTab === "dictionary" ? "Dictionary"
               : "Overview"
             }`}
 
@@ -684,10 +714,11 @@ setGame(after);
                 ? "ggdb:credits-save-request"
               : activeTab === "banner"
                 ? "ggdb:banner-save-request"
-            : activeTab === "review"
-              ? "ggdb:reviews-save-request"
+              : activeTab === "review"
+                ? "ggdb:reviews-save-request"
+              : activeTab === "dictionary"
+                ? "ggdb:dictionary-save-request"
               : "ggdb:overview-save-request";
-
                 window.dispatchEvent(new CustomEvent(evName));
                 setIsEditing(false);
               }}
@@ -757,6 +788,15 @@ setGame(after);
   gameId={game.id}
   adminUserId={adminUserId}
 />
+
+<DictionaryModal
+  open={openDictionary}
+  onClose={() => setOpenDictionary(false)}
+  editable={isEditing}
+  data={game}
+  onSave={handlePersist}
+/>
+
 
     </div>
   );
