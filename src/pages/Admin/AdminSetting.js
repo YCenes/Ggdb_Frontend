@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+// src/pages/admin/SettingsPage.tsx (veya dosyan nerede ise)
+import React, { useEffect, useMemo, useState } from "react";
 import "../../styles/admin/_settings-admin.scss";
+import { useSettings } from "../../hooks/settingsHooks.ts"; // ← kendi yoluna göre düzelt
 
 /** Küçük yardımcılar */
 const cx = (...a) => a.filter(Boolean).join(" ");
@@ -29,7 +31,6 @@ function FileButton({ id, label = "Choose File", onPick, right }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <label htmlFor={id} className="file-btn">
-        {/* küçük ikon (inline svg) */}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M12 3a4 4 0 00-4 4v2H6a3 3 0 000 6h12a3 3 0 000-6h-2V7a4 4 0 00-4-4z" />
         </svg>
@@ -56,52 +57,83 @@ const TABS = [
   { key: "seo", label: "SEO Settings" },
 ];
 
-const DEFAULTS = {
-  general: {
-    siteName: "GGDB",
-    siteDesc: "The Ultimate Gaming Database",
-    maintenance: true,
-    allowRegistrations: false,
-    favicon: null,
-  },
-  security: { twoFA: true, timeout: 30, maxAttempts: 5, minLength: 8 },
-  content: { autoMod: true, requireApproval: true, allowReviews: true, maxFileMb: 10 },
-  seo: {
-    titleTpl: "%s | GGDB - Gaming Database",
-    metaDesc:
-      "Discover, rate, and review the best games. Join GGDB community for comprehensive gaming database with reviews, ratings, and more.",
-    keywords: "gaming, games, database, reviews, ratings",
-    canonical: "https://ggdb.com",
-    ogImage: "https://ggdb.com/og-image.jpg",
-    twitterType: "summary_large_image",
-    twitterHandle: "@GGDB",
-    genSitemap: true,
-    jsonLd: true,
-    analyticsEnabled: false,
-    analyticsId: "",
-  },
-};
-
 export default function SettingsPage() {
-  const [active, setActive] = useState("general");
-  const [data, setData] = useState(structuredClone(DEFAULTS));
+  const { data: srv, isLoading, error, save, uploadFav, refetch } = useSettings();
+
+  // Server'dan gelen ayarların UI kopyası
+  const [form, setForm] = useState(null);
   const [dirty, setDirty] = useState(false);
+  const [active, setActive] = useState("general");
+
+  // İlk yüklemede veya sunucu verisi değiştiğinde (ve form kirli değilse) formu doldur
+  useEffect(() => {
+    if (srv && !dirty) setForm(srv);
+  }, [srv]);
 
   const setPart = (section, patch) => {
-    setData((d) => ({ ...d, [section]: { ...d[section], ...patch } }));
+    if (!form) return;
+    const next = { ...form, [section]: { ...form[section], ...patch } };
+    setForm(next);
     setDirty(true);
   };
 
   const resetAll = () => {
-    setData(structuredClone(DEFAULTS));
-    setDirty(false);
+    if (srv) {
+      setForm(srv);
+      setDirty(false);
+    }
   };
 
-  const saveAll = () => {
-    // Burada backend'e POST/PUT bağlayabilirsin
-    console.log("SAVE SETTINGS (mock):", data);
-    setDirty(false);
-    alert("Settings saved (mock).");
+  const saveAll = async () => {
+    if (!form) return;
+    try {
+      await save.mutateAsync(form); // PUT /api/settings
+      setDirty(false);
+      alert("Settings saved");
+    } catch (e) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        alert("Ayarlar başka bir yerde değişmiş. Güncel değerler yükleniyor.");
+        const fresh = await refetch();
+        if (fresh?.data) setForm(fresh.data);
+        setDirty(false);
+      } else if (status === 400) {
+        const msgs = e?.response?.data;
+        console.error("Validation error", msgs);
+        alert("Validasyon hatası. Alanları kontrol et.");
+      } else {
+        console.error(e);
+        alert("Kaydetme hatası.");
+      }
+    }
+  };
+
+  // Yükleme/bağlantı hatası durumları
+  if (isLoading && !form) {
+    return <div className="settings-page"><div className="settings-card"><h2>Loading settings…</h2></div></div>;
+  }
+  if (error && !form) {
+    return <div className="settings-page"><div className="settings-card"><h2>Settings yüklenemedi.</h2></div></div>;
+  }
+
+  // Fallback: form boşsa basit defaultlar (çok kısa süreli)
+  const data = form ?? {
+    general: { siteName: "", siteDesc: "", maintenance: false, allowRegistrations: false, faviconUrl: "" },
+    security: { twoFA: false, timeout: 30, maxAttempts: 5, minLength: 8 },
+    content: { autoMod: true, requireApproval: true, allowReviews: true, maxFileMb: 10 },
+    seo: {
+      titleTpl: "%s | GGDB - Gaming Database",
+      metaDesc: "",
+      keywords: "",
+      canonical: "",
+      ogImage: "",
+      twitterType: "summary_large_image",
+      twitterHandle: "@GGDB",
+      genSitemap: true,
+      jsonLd: true,
+      analyticsEnabled: false,
+      analyticsId: "",
+    },
   };
 
   return (
@@ -134,7 +166,7 @@ export default function SettingsPage() {
               <input
                 id="siteName"
                 type="text"
-                value={data.general.siteName}
+                value={data.general.siteName ?? ""}
                 onChange={(e) => setPart("general", { siteName: e.target.value })}
                 placeholder="GGDB"
               />
@@ -150,7 +182,7 @@ export default function SettingsPage() {
               <textarea
                 id="siteDesc"
                 rows={3}
-                value={data.general.siteDesc}
+                value={data.general.siteDesc ?? ""}
                 onChange={(e) => setPart("general", { siteDesc: e.target.value })}
                 placeholder="The Ultimate Gaming Database"
               />
@@ -165,7 +197,7 @@ export default function SettingsPage() {
             <div>
               <Toggle
                 id="maintenance"
-                checked={data.general.maintenance}
+                checked={!!data.general.maintenance}
                 onChange={(v) => setPart("general", { maintenance: v })}
               />
             </div>
@@ -179,12 +211,13 @@ export default function SettingsPage() {
             <div>
               <Toggle
                 id="allowRegs"
-                checked={data.general.allowRegistrations}
+                checked={!!data.general.allowRegistrations}
                 onChange={(v) => setPart("general", { allowRegistrations: v })}
               />
             </div>
           </div>
 
+          {/* Favicon: artık URL saklıyoruz (faviconUrl). Yükleme ayrı endpoint. */}
           <div className="row">
             <div>
               <label htmlFor="favicon">Site Favicon</label>
@@ -193,12 +226,20 @@ export default function SettingsPage() {
             <div>
               <FileButton
                 id="favicon"
-                onPick={(f) => setPart("general", { favicon: f })}
+                onPick={async (f) => {
+                  try {
+                    const url = await uploadFav.mutateAsync(f); // POST /settings/favicon
+                    setPart("general", { faviconUrl: url });
+                  } catch (e) {
+                    console.error(e);
+                    alert("Favicon yüklenemedi");
+                  }
+                }}
                 right={
-                  data.general.favicon ? (
-                    <span style={{ color: "rgba(255,255,255,.7)", fontSize: 14 }}>
-                      {data.general.favicon.name}
-                    </span>
+                  data.general.faviconUrl ? (
+                    <a href={data.general.faviconUrl} target="_blank" rel="noreferrer" style={{ color: "rgba(255,255,255,.7)", fontSize: 14 }}>
+                      {data.general.faviconUrl}
+                    </a>
                   ) : (
                     <span
                       style={{
@@ -218,11 +259,11 @@ export default function SettingsPage() {
           </div>
 
           <div className="actions">
-            <button className="reset" onClick={resetAll}>
+            <button className="reset" onClick={resetAll} disabled={save.isPending || uploadFav.isPending}>
               Reset
             </button>
-            <button className="save" onClick={saveAll} disabled={!dirty}>
-              Save Changes
+            <button className="save" onClick={saveAll} disabled={!dirty || save.isPending}>
+              {save.isPending ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
@@ -241,7 +282,7 @@ export default function SettingsPage() {
             <div>
               <Toggle
                 id="twofa"
-                checked={data.security.twoFA}
+                checked={!!data.security.twoFA}
                 onChange={(v) => setPart("security", { twoFA: v })}
               />
             </div>
@@ -258,7 +299,7 @@ export default function SettingsPage() {
                 type="number"
                 min={5}
                 max={240}
-                value={data.security.timeout}
+                value={data.security.timeout ?? 30}
                 onChange={(e) => setPart("security", { timeout: Number(e.target.value) })}
               />
             </div>
@@ -275,7 +316,7 @@ export default function SettingsPage() {
                 type="number"
                 min={3}
                 max={20}
-                value={data.security.maxAttempts}
+                value={data.security.maxAttempts ?? 5}
                 onChange={(e) => setPart("security", { maxAttempts: Number(e.target.value) })}
               />
             </div>
@@ -292,14 +333,14 @@ export default function SettingsPage() {
                 type="number"
                 min={6}
                 max={64}
-                value={data.security.minLength}
+                value={data.security.minLength ?? 8}
                 onChange={(e) => setPart("security", { minLength: Number(e.target.value) })}
               />
             </div>
           </div>
 
           <div className="actions">
-            <button className="reset" onClick={() => alert("Force logout (mock)")}>
+            <button className="reset" onClick={() => alert("Force logout (mock)")} disabled>
               Force Logout All
             </button>
           </div>
@@ -311,7 +352,7 @@ export default function SettingsPage() {
         <div className="settings-card" aria-labelledby="cnt-title">
           <h2 id="cnt-title">Content Management</h2>
 
-          <div className="row">
+        <div className="row">
             <div>
               <label htmlFor="automod">Auto Moderation</label>
               <small>Automatically moderate user content</small>
@@ -319,7 +360,7 @@ export default function SettingsPage() {
             <div>
               <Toggle
                 id="automod"
-                checked={data.content.autoMod}
+                checked={!!data.content.autoMod}
                 onChange={(v) => setPart("content", { autoMod: v })}
               />
             </div>
@@ -333,7 +374,7 @@ export default function SettingsPage() {
             <div>
               <Toggle
                 id="approval"
-                checked={data.content.requireApproval}
+                checked={!!data.content.requireApproval}
                 onChange={(v) => setPart("content", { requireApproval: v })}
               />
             </div>
@@ -347,7 +388,7 @@ export default function SettingsPage() {
             <div>
               <Toggle
                 id="reviews"
-                checked={data.content.allowReviews}
+                checked={!!data.content.allowReviews}
                 onChange={(v) => setPart("content", { allowReviews: v })}
               />
             </div>
@@ -364,18 +405,18 @@ export default function SettingsPage() {
                 type="number"
                 min={1}
                 max={100}
-                value={data.content.maxFileMb}
+                value={data.content.maxFileMb ?? 10}
                 onChange={(e) => setPart("content", { maxFileMb: Number(e.target.value) })}
               />
             </div>
           </div>
 
           <div className="actions">
-            <button className="reset" onClick={resetAll}>
+            <button className="reset" onClick={resetAll} disabled={save.isPending}>
               Reset
             </button>
-            <button className="save" onClick={saveAll} disabled={!dirty}>
-              Save Changes
+            <button className="save" onClick={saveAll} disabled={!dirty || save.isPending}>
+              {save.isPending ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
@@ -395,7 +436,7 @@ export default function SettingsPage() {
               <input
                 id="titleTpl"
                 type="text"
-                value={data.seo.titleTpl}
+                value={data.seo.titleTpl ?? ""}
                 onChange={(e) => setPart("seo", { titleTpl: e.target.value })}
               />
             </div>
@@ -410,7 +451,7 @@ export default function SettingsPage() {
               <textarea
                 id="metaDesc"
                 rows={3}
-                value={data.seo.metaDesc}
+                value={data.seo.metaDesc ?? ""}
                 onChange={(e) => setPart("seo", { metaDesc: e.target.value })}
               />
             </div>
@@ -425,7 +466,7 @@ export default function SettingsPage() {
               <input
                 id="keywords"
                 type="text"
-                value={data.seo.keywords}
+                value={data.seo.keywords ?? ""}
                 onChange={(e) => setPart("seo", { keywords: e.target.value })}
               />
             </div>
@@ -439,7 +480,7 @@ export default function SettingsPage() {
               <input
                 id="canonical"
                 type="text"
-                value={data.seo.canonical}
+                value={data.seo.canonical ?? ""}
                 onChange={(e) => setPart("seo", { canonical: e.target.value })}
               />
             </div>
@@ -453,7 +494,7 @@ export default function SettingsPage() {
               <input
                 id="og"
                 type="text"
-                value={data.seo.ogImage}
+                value={data.seo.ogImage ?? ""}
                 onChange={(e) => setPart("seo", { ogImage: e.target.value })}
               />
             </div>
@@ -466,7 +507,7 @@ export default function SettingsPage() {
             <div>
               <select
                 id="twType"
-                value={data.seo.twitterType}
+                value={data.seo.twitterType ?? "summary_large_image"}
                 onChange={(e) => setPart("seo", { twitterType: e.target.value })}
               >
                 <option value="summary">Summary</option>
@@ -485,7 +526,7 @@ export default function SettingsPage() {
               <input
                 id="twHandle"
                 type="text"
-                value={data.seo.twitterHandle}
+                value={data.seo.twitterHandle ?? ""}
                 onChange={(e) => setPart("seo", { twitterHandle: e.target.value })}
                 placeholder="@GGDB"
               />
@@ -499,7 +540,7 @@ export default function SettingsPage() {
             <div>
               <Toggle
                 id="sitemap"
-                checked={data.seo.genSitemap}
+                checked={!!data.seo.genSitemap}
                 onChange={(v) => setPart("seo", { genSitemap: v })}
               />
             </div>
@@ -513,7 +554,7 @@ export default function SettingsPage() {
             <div>
               <Toggle
                 id="jsonld"
-                checked={data.seo.jsonLd}
+                checked={!!data.seo.jsonLd}
                 onChange={(v) => setPart("seo", { jsonLd: v })}
               />
             </div>
@@ -527,24 +568,25 @@ export default function SettingsPage() {
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Toggle
                 id="analytics"
-                checked={data.seo.analyticsEnabled}
+                checked={!!data.seo.analyticsEnabled}
                 onChange={(v) => setPart("seo", { analyticsEnabled: v })}
               />
               <input
                 type="text"
                 placeholder="G-XXXXXXXXXX / UA-XXXXXX-X"
-                value={data.seo.analyticsId}
+                value={data.seo.analyticsId ?? ""}
                 onChange={(e) => setPart("seo", { analyticsId: e.target.value })}
+                disabled={!data.seo.analyticsEnabled}
               />
             </div>
           </div>
 
           <div className="actions">
-            <button className="reset" onClick={resetAll}>
+            <button className="reset" onClick={resetAll} disabled={save.isPending}>
               Reset
             </button>
-            <button className="save" onClick={saveAll} disabled={!dirty}>
-              Save Changes
+            <button className="save" onClick={saveAll} disabled={!dirty || save.isPending}>
+              {save.isPending ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
